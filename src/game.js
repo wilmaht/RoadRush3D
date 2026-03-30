@@ -288,16 +288,17 @@ class GameAudio {
             this.engGain.gain.value = 0.02 + speed * 0.0003;
         }
     }
-    startSiren() {
+    startSiren(type='police') {
         if (this.sirenOn) return;
         this.init();
         this.sirenOn = true;
+        this.sirenType = type;
         this.sirenGain = this.ctx.createGain();
         this.sirenGain.gain.value = 0.06;
         this.sirenGain.connect(this.ctx.destination);
         this.sirenOsc = this.ctx.createOscillator();
         this.sirenOsc.type = 'sine';
-        this.sirenOsc.frequency.value = 600;
+        this.sirenOsc.frequency.value = type === 'ambulance' ? 800 : 600;
         this.sirenOsc.connect(this.sirenGain);
         this.sirenOsc.start();
         this._sirenLoop();
@@ -305,10 +306,23 @@ class GameAudio {
     _sirenLoop() {
         if (!this.sirenOn || !this.sirenOsc) return;
         const t = this.ctx.currentTime;
-        this.sirenOsc.frequency.setValueAtTime(600, t);
-        this.sirenOsc.frequency.linearRampToValueAtTime(900, t + 0.3);
-        this.sirenOsc.frequency.linearRampToValueAtTime(600, t + 0.6);
-        setTimeout(() => this._sirenLoop(), 600);
+        if (this.sirenType === 'ambulance') {
+            // Скорая: высокий wail 800→1200→800, длинный цикл 1с, с паузой
+            this.sirenOsc.frequency.setValueAtTime(800, t);
+            this.sirenOsc.frequency.linearRampToValueAtTime(1200, t + 0.4);
+            this.sirenOsc.frequency.linearRampToValueAtTime(800, t + 0.8);
+            this.sirenGain.gain.setValueAtTime(0.05, t);
+            this.sirenGain.gain.setValueAtTime(0.05, t + 0.8);
+            this.sirenGain.gain.linearRampToValueAtTime(0.01, t + 0.9);
+            this.sirenGain.gain.linearRampToValueAtTime(0.05, t + 1.0);
+            setTimeout(() => this._sirenLoop(), 1000);
+        } else {
+            // Полиция: быстрый yelp 600→900→600, 0.6с
+            this.sirenOsc.frequency.setValueAtTime(600, t);
+            this.sirenOsc.frequency.linearRampToValueAtTime(900, t + 0.3);
+            this.sirenOsc.frequency.linearRampToValueAtTime(600, t + 0.6);
+            setTimeout(() => this._sirenLoop(), 600);
+        }
     }
     stopSiren() {
         this.sirenOn = false;
@@ -2873,6 +2887,7 @@ function resetGame() {
         state.fuel = 100;
     } else if (state.mode === 'cop') {
         ui.copUI.style.display = 'block';
+        sfx.startSiren('police');
         // Spawn criminal car ahead
         if (criminalCar) scene.remove(criminalCar);
         criminalCar = buildSportsCar ? buildSportsCar(0x111111) : buildSedan(0x111111);
@@ -2886,7 +2901,8 @@ function resetGame() {
     } else if (state.mode === 'ambulance' || state.mode === 'taxi') {
         ui.timerUI.style.display = 'block';
         ui.timerIcon.textContent = state.mode === 'ambulance' ? '🚑' : '🚕';
-        state.missionTimer = state.mode === 'ambulance' ? 60 : 50;
+        if (state.mode === 'ambulance') sfx.startSiren('ambulance');
+        state.missionTimer = state.mode === 'ambulance' ? 75 : 60;
         state.missionDist = 0;
     }
 }
@@ -3222,7 +3238,7 @@ function updateTimerMode(dt) {
     }
 
     // Target distance: 3000m for ambulance, 2500m for taxi
-    const targetDist = state.mode === 'ambulance' ? 3000 : 2500;
+    const targetDist = state.mode === 'ambulance' ? 2000 : 1500;
 
     // Win: reached destination
     if (state.missionDist >= targetDist) {
