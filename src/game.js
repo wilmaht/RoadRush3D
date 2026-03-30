@@ -1373,20 +1373,17 @@ function makeBridge() {
 
 function makeBarrier() {
     const g = new THREE.Group();
-    // Highway guardrail: horizontal bar on posts with reflective strips
     const postCount = 4;
     for (let i=0;i<postCount;i++) {
-        const px = i*1.0 - (postCount-1)*0.5;
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.7,0.08).translate(px,0.35,0), matPole));
+        const pz = i*1.0 - (postCount-1)*0.5;
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.7,0.08).translate(0,0.35,pz), matPole));
     }
-    // Horizontal rail
     const railW = (postCount-1)*1.0 + 0.3;
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(railW,0.12,0.06).translate(0,0.55,0), matMetal));
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(railW,0.12,0.06).translate(0,0.3,0), matMetal));
-    // Reflective strips
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.12,railW).translate(0,0.55,0), matMetal));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.12,railW).translate(0,0.3,0), matMetal));
     for (let i=0;i<postCount-1;i++) {
-        const sx = i*1.0 - (postCount-2)*0.5;
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.08,0.08).translate(sx,0.55,0.04), matYellow));
+        const sz = i*1.0 - (postCount-2)*0.5;
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.06).translate(0.04,0.55,sz), matYellow));
     }
     return g;
 }
@@ -1540,14 +1537,12 @@ function makeBillboard() {
 function makeFenceRow() {
     const g = new THREE.Group();
     const length = 6 + Math.floor(Math.random()*4);
-    // Posts
     for (let i=0; i<length; i++) {
-        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.06,1.0,5).translate(i*1.2-(length-1)*0.6,0.5,0), matFencePost));
+        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.06,1.0,5).translate(0,0.5,i*1.2-(length-1)*0.6), matFencePost));
     }
-    // Horizontal bars
     const barW = (length-1)*1.2 + 0.2;
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(barW,0.06,0.06).translate(0,0.75,0), matFence));
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(barW,0.06,0.06).translate(0,0.4,0), matFence));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,barW).translate(0,0.75,0), matFence));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,barW).translate(0,0.4,0), matFence));
     return g;
 }
 
@@ -2033,7 +2028,12 @@ const ui = {
 };
 
 function showBiome(n) { ui.biome.textContent = n; ui.biome.classList.add('show'); setTimeout(()=>ui.biome.classList.remove('show'),3000); }
-function showCombo(n) { ui.combo.textContent=`x${n} COMBO!`; ui.combo.style.opacity='1'; ui.combo.style.fontSize=`${30+n*3}px`; setTimeout(()=>ui.combo.style.opacity='0',800); }
+function showCombo(n) {
+    ui.combo.textContent = `x${n} COMBO!`;
+    ui.combo.classList.remove('combo-anim');
+    void ui.combo.offsetWidth; // trigger reflow
+    ui.combo.classList.add('combo-anim');
+}
 function showNearMiss() { ui.nearMiss.textContent='+50 NEAR MISS!'; ui.nearMiss.style.opacity='1'; setTimeout(()=>ui.nearMiss.style.opacity='0',600); }
 function updateMenuRecord() { const b=localStorage.getItem('rr3d_best')||0; ui.menuRecord.textContent=b>0?`Рекорд: ${b}`:''; }
 
@@ -2834,45 +2834,49 @@ function updateFuelMode(dt, playerX) {
     }
 }
 
+function getXOffForCat(cat) {
+    if (cat === 'fence') return ROAD_W/2 + 3.5;
+    if (cat === 'barrier') return ROAD_W/2 + 1.5;
+    if (cat === 'bush') return ROAD_W/2 + 5.0;
+    if (cat === 'sign') return ROAD_W/2 + 5.5;
+    if (cat === 'rock') return ROAD_W/2 + 7.5;
+    if (cat === 'tree') return ROAD_W/2 + 9.0;
+    if (cat === 'building') return ROAD_W/2 + 14.0;
+    if (cat === 'billboard') return ROAD_W/2 + 16.0;
+    return ROAD_W/2 + 10.0;
+}
+
 function spawnE() {
-    const b=BIOMES[state.biomeIdx];
-    const side=Math.random()<0.5?-1:1;
-    const result=spawnEnvObject(b.env);
-    const mesh=result.mesh;
-    const cat=result.cat;
-    const z=state.dist+70+Math.random()*60;
-
-    // City biome: buildings very close to road, always both sides
-    if (b.env === 'city' && cat === 'building') {
-        const xOff = ROAD_W/2 + 5.5; // Сдвигаем назад, чтобы машины не врезались в текстуры (5.5м от края)
-        mesh.position.set(-xOff, 0, z);
-        scene.add(mesh); state.envObjs.push({mesh:mesh, z:z});
-        // Second building on opposite side
-        const result2 = spawnEnvObject('city');
-        if (result2.cat === 'building') {
-            const mesh2 = result2.mesh;
-            const z2 = z; // Строго симметрично, без случайных скачков!
-            mesh2.position.set(xOff, 0, z2);
-            scene.add(mesh2); state.envObjs.push({mesh:mesh2, z:z2});
+    const b = BIOMES[state.biomeIdx];
+    
+    if (typeof state.lastGridZ === 'undefined') {
+        state.lastGridZ = state.dist + 80;
+    }
+    
+    // Идеальная сетка спавна: каждые 30 метров
+    while (state.lastGridZ < state.dist + 200) {
+        const z = state.lastGridZ;
+        
+        // Spawn left (-x)
+        if (Math.random() < 0.8) {
+            const resL = spawnEnvObject(b.env);
+            const xOff = b.env === 'city' ? (ROAD_W/2 + 5.5) : getXOffForCat(resL.cat);
+            resL.mesh.position.set(-xOff, 0, z);
+            scene.add(resL.mesh); 
+            state.envObjs.push({mesh:resL.mesh, z:z});
         }
-        return;
+        
+        // Spawn right (+x)
+        if (Math.random() < 0.8) {
+            const resR = spawnEnvObject(b.env);
+            const xOff = b.env === 'city' ? (ROAD_W/2 + 5.5) : getXOffForCat(resR.cat);
+            resR.mesh.position.set(xOff, 0, z);
+            scene.add(resR.mesh); 
+            state.envObjs.push({mesh:resR.mesh, z:z});
+        }
+        
+        state.lastGridZ += 30;
     }
-
-    let xOff;
-    switch(cat) {
-        // Убираем хаотичный Math.random(), чтобы объекты выстраивались в идеальные ровные аллеи и линии!
-        case 'fence': xOff=ROAD_W/2+3.5; break;
-        case 'barrier': xOff=ROAD_W/2+1.5; break;
-        case 'bush': xOff=ROAD_W/2+5.0; break;
-        case 'sign': xOff=ROAD_W/2+5.5; break;
-        case 'rock': xOff=ROAD_W/2+7.5; break;
-        case 'tree': xOff=ROAD_W/2+9.0; break;
-        case 'building': xOff=ROAD_W/2+14.0; break;
-        case 'billboard': xOff=ROAD_W/2+16.0; break;
-        default: xOff=ROAD_W/2+10.0; break;
-    }
-    mesh.position.set(side*xOff,0,z);
-    scene.add(mesh); state.envObjs.push({mesh:mesh,z:z});
 }
 
 function addCoinsToWallet(coins) {
@@ -3937,20 +3941,15 @@ const speedNumber = document.getElementById('speed-number');
 const speedometerEl = document.getElementById('speedometer');
 
 function updateSpeedometer(speed) {
-    const maxSpeed = 200;
-    const pct = Math.min(speed / maxSpeed, 1);
-    // Угол: 0 км/ч = 180° (левая сторона), 200 км/ч = 0° (правая сторона)
-    const angle = Math.PI * (1 - pct); // от PI до 0
-    const cx = 70, cy = 75, len = 50;
-    const nx = cx + Math.cos(angle) * len;
-    const ny = cy - Math.sin(angle) * len;
-    speedNeedle.setAttribute('x2', nx.toFixed(1));
-    speedNeedle.setAttribute('y2', ny.toFixed(1));
-    speedNumber.textContent = Math.floor(speed);
-    // Цвет стрелки: зелёный → жёлтый → красный
-    if (speed > 140) speedNeedle.setAttribute('stroke', '#FF1744');
-    else if (speed > 80) speedNeedle.setAttribute('stroke', '#FFEB3B');
-    else speedNeedle.setAttribute('stroke', '#4CAF50');
+    const speedNumber = document.getElementById('speed-number');
+    const arc = document.getElementById('speed-arc');
+    if (speedNumber) speedNumber.textContent = Math.floor(speed);
+    if (arc) {
+        const maxSpeed = 220;
+        const pct = Math.max(0, Math.min(speed / maxSpeed, 1));
+        const offset = Math.max(0, 424 - (424 * pct));
+        arc.setAttribute('stroke-dashoffset', offset);
+    }
 }
 
 const hudControls = document.getElementById('hud-controls');
