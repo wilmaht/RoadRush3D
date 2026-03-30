@@ -1035,108 +1035,127 @@ const matCanopy = M(0x546E7A);
 const matPumpBody = M(0xCFD8DC);
 const matBillboardFrame = M(0x666666);
 
-// City block shared materials
-const matGlass = new THREE.MeshStandardMaterial({color:0x88CCEE, transparent:true, opacity:0.4, flatShading:true});
-const CITY_WALL_COLORS = [0xE57373, 0xBA68C8, 0x64B5F6, 0xFFB74D, 0xF06292, 0x4DB6AC, 0xFFD54F, 0xA1887F, 0x9575CD, 0x4FC3F7, 0xFF8A65, 0xAED581];
+// City block shared materials (Synthwave / Vector Art)
+const CITY_WALL_COLORS = [0x9C27B0, 0x673AB7, 0x3F51B5, 0x03A9F4, 0x00BCD4, 0x009688, 0xFF9800, 0xFF5722, 0xE91E63, 0xF50057, 0xFFEB3B, 0x7B1FA2];
 const cityWallMats = CITY_WALL_COLORS.map(c => M(c));
-const cityWallDarkMats = CITY_WALL_COLORS.map(c => M(new THREE.Color(c).multiplyScalar(0.6)));
-const AWNING_COLORS = [0xD32F2F, 0x1976D2, 0x388E3C, 0xFF8F00, 0x6A1B9A];
+const cityWallDarkMats = CITY_WALL_COLORS.map(c => M(new THREE.Color(c).multiplyScalar(0.7)));
+
+const AWNING_COLORS = [0xE21A4B, 0xFF4081, 0x00E5FF, 0xFFD740, 0x7E57C2];
 const cityAwningMats = AWNING_COLORS.map(c => M(c));
-const matCityLedge = M(0x555555);
-const matCityRoof = M(0x444444);
-const matCityWindowFrame = M(0xBBDDFF);
-const matCityStorefront = new THREE.MeshStandardMaterial({color:0xAADDFF, transparent:true, opacity:0.5, flatShading:true});
+
+const matCityLedge = M(0x283593);
+const matCityRoof = M(0x1A237E);
+const matGlass = new THREE.MeshStandardMaterial({color:0xB2EBF2, transparent:true, opacity:0.8, flatShading:true});
+const nightWinMats = [ME(0x00E5FF, 1.2), ME(0xFF4081, 1.2), ME(0xFFEA00, 1.2), ME(0x00E676, 1.2)];
 
 function makeCityBlock() {
     const group = new THREE.Group();
-    const buildingCount = isMobile ? (1 + Math.floor(Math.random() * 2)) : (3 + Math.floor(Math.random() * 2));
+    const buildingCount = isMobile ? (1 + Math.floor(Math.random() * 2)) : (2 + Math.floor(Math.random() * 2));
     let zCursor = 0;
+    const isNight = typeof isNightBiome === 'function' && isNightBiome();
 
     for (let b = 0; b < buildingCount; b++) {
-        const bw = 4 + Math.random() * 3;
-        const bh = 8 + Math.random() * 12;
+        const bw = 5 + Math.random() * 4;
+        const bhBase = 7 + Math.random() * 8;
         const bd = 5 + Math.random() * 3;
         const colorIdx = Math.floor(Math.random() * CITY_WALL_COLORS.length);
         const wallMat = cityWallMats[colorIdx];
         const darkMat = cityWallDarkMats[colorIdx];
         const bg = new THREE.Group();
 
-        // Основные стены
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd).translate(0, bh / 2, 0), wallMat));
+        // Основное здание
+        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bhBase, bd).translate(0, bhBase / 2, 0), wallMat));
+        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.4, 0.4, bd + 0.4).translate(0, bhBase + 0.2, 0), matCityLedge));
 
-        if (isMobile) {
-            // Mobile: simple box only, no details
-            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.5, 0.3, bd + 0.5).translate(0, bh + 0.15, 0), matCityRoof));
-        } else {
-        // Тёмный первый этаж
-        const baseH = 3.5;
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.04, baseH, bd + 0.04).translate(0, baseH / 2, 0), darkMat));
-
-        // Витрины на первом этаже — 2-3 окна
-        const winCount = Math.max(2, Math.floor(bw / 2));
-        const winW = (bw * 0.8) / winCount - 0.2;
-        const startX = -(winCount - 1) * (winW + 0.2) / 2;
-        for (let w = 0; w < winCount; w++) {
-            const wx = startX + w * (winW + 0.2);
-            // Витрина (голубое стекло)
-            bg.add(new THREE.Mesh(new THREE.BoxGeometry(winW, 2.0, 0.08).translate(wx, 1.5, bd / 2 + 0.06), matGlass));
-            // Рама окна (тёмная)
-            bg.add(new THREE.Mesh(new THREE.BoxGeometry(winW + 0.1, 0.08, 0.1).translate(wx, 2.55, bd / 2 + 0.06), matCityRoof));
-        }
-
-        // Дверь (одна, по центру или сбоку)
-        const doorX = (Math.random() - 0.5) * bw * 0.3;
-        const doorMat = M(0x5D4037);
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.8, 2.2, 0.08).translate(doorX, 1.1, bd / 2 + 0.06), doorMat));
-
-        // Козырёк над первым этажом (большой, заметный)
-        const awnMat = cityAwningMats[Math.floor(Math.random() * AWNING_COLORS.length)];
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.9, 0.12, 1.2).translate(0, baseH, bd / 2 + 0.6), awnMat));
-        // Скошенная передняя часть козырька
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.9, 0.5, 0.08).translate(0, baseH - 0.25, bd / 2 + 1.15), awnMat));
-
-        // Карниз между этажами
-        const trimMat = cityAwningMats[Math.floor(Math.random() * AWNING_COLORS.length)];
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.2, 0.25, bd + 0.2).translate(0, baseH + 0.12, 0), trimMat));
-
-        // Окна верхних этажей — отдельные ряды с рамами
-        const floorH = 2.8;
-        for (let y = baseH + 1.5; y < bh - 1.5; y += floorH) {
-            // Карниз между этажами
-            if (y > baseH + 3) {
-                bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.1, 0.1, 0.15).translate(0, y - 0.5, bd / 2 + 0.08), trimMat));
-            }
-            // Окна на фасаде
-            const floorWinCount = Math.max(2, Math.floor(bw / 1.8));
-            const fww = (bw * 0.8) / floorWinCount - 0.15;
-            const fsx = -(floorWinCount - 1) * (fww + 0.15) / 2;
-            for (let w = 0; w < floorWinCount; w++) {
-                const fx = fsx + w * (fww + 0.15);
-                // Стекло окна
-                bg.add(new THREE.Mesh(new THREE.BoxGeometry(fww, 1.4, 0.06).translate(fx, y + 0.5, bd / 2 + 0.06), matGlass));
-                // Подоконник (светлый)
-                bg.add(new THREE.Mesh(new THREE.BoxGeometry(fww + 0.15, 0.1, 0.2).translate(fx, y - 0.25, bd / 2 + 0.1), M(0xEEEEEE)));
-            }
-            // Окна на боковой стене
-            if (Math.random() < 0.6) {
-                for (let w = 0; w < 2; w++) {
-                    const sz = (w - 0.5) * 2;
-                    bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.2, 0.9).translate(bw / 2 + 0.06, y + 0.4, sz), matGlass));
+        if (!isMobile) {
+            // Верхние ярусы (Ступенчатые крыши как на референсе)
+            if (Math.random() < 0.7) {
+                const bw2 = bw * (0.6 + Math.random() * 0.3);
+                const bh2 = 4 + Math.random() * 6;
+                const bd2 = bd * (0.6 + Math.random() * 0.3);
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw2, bh2, bd2).translate(0, bhBase + bh2/2, 0), darkMat));
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw2 + 0.3, 0.3, bd2 + 0.3).translate(0, bhBase + bh2 + 0.15, 0), matCityLedge));
+                
+                // Третий ярус
+                if (Math.random() < 0.4) {
+                    const bw3 = bw2 * 0.6;
+                    const bh3 = 2 + Math.random() * 4;
+                    const bd3 = bd2 * 0.6;
+                    bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw3, bh3, bd3).translate(0, bhBase + bh2 + bh3/2, 0), wallMat));
                 }
             }
-        }
 
-        // Крыша с карнизом
-        bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.5, 0.3, bd + 0.5).translate(0, bh + 0.15, 0), matCityRoof));
-        // Декоративный элемент на крыше (иногда)
-        if (Math.random() < 0.4) {
-            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.3, 1.0, bd * 0.3).translate(0, bh + 0.8, 0), matCityRoof));
+            // Темный первый этаж
+            const baseH = 3.0;
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.1, baseH, bd + 0.1).translate(0, baseH / 2, 0), matCityRoof));
+
+            const winCount = Math.max(2, Math.floor(bw / 1.8));
+            const winW = (bw * 0.8) / winCount - 0.2;
+            const startX = -(winCount - 1) * (winW + 0.2) / 2;
+            
+            const activeWinMat = nightWinMats[Math.floor(Math.random() * nightWinMats.length)];
+
+            // Окна первого этажа (+Z и -Z)
+            for (let w = 0; w < winCount; w++) {
+                const wx = startX + w * (winW + 0.2);
+                const isLit = isNight && Math.random() < 0.5;
+                const wMat = isLit ? activeWinMat : matGlass;
+                // +Z
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(winW, 1.8, 0.08).translate(wx, 1.4, bd / 2 + 0.06), wMat));
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(winW + 0.1, 1.9, 0.05).translate(wx, 1.4, bd / 2 + 0.05), matCityLedge));
+                // -Z
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(winW, 1.8, 0.08).translate(wx, 1.4, -bd / 2 - 0.06), wMat));
+            }
+
+            // Стилизованный козырёк (Awning) как на векторной графике
+            const awnMat = cityAwningMats[Math.floor(Math.random() * AWNING_COLORS.length)];
+            // +Z Awning
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.95, 0.15, 1.0).translate(0, baseH + 0.1, bd / 2 + 0.5), awnMat));
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.95, 0.4, 0.08).translate(0, baseH - 0.1, bd / 2 + 0.95), awnMat));
+            // -Z Awning
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.95, 0.15, 1.0).translate(0, baseH + 0.1, -bd / 2 - 0.5), awnMat));
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.95, 0.4, 0.08).translate(0, baseH - 0.1, -bd / 2 - 0.95), awnMat));
+
+            // Межэтажный пояс
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.2, 0.2, bd + 0.2).translate(0, baseH + 0.3, 0), awnMat));
+
+            // Верхние окна
+            const floorH = 2.8;
+            for (let y = baseH + 1.8; y < bhBase - 1.0; y += floorH) {
+                if (Math.random() < 0.5) {
+                    bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.15, 0.15, bd + 0.15).translate(0, y - 0.6, 0), darkMat));
+                }
+
+                const fww = (bw * 0.7) / winCount - 0.1;
+                const fsx = -(winCount - 1) * (fww + 0.1) / 2;
+                for (let w = 0; w < winCount; w++) {
+                    const fx = fsx + w * (fww + 0.1);
+                    const isLit = isNight && Math.random() < 0.6;
+                    const cMat = isLit ? activeWinMat : matGlass;
+                    
+                    bg.add(new THREE.Mesh(new THREE.BoxGeometry(fww, 1.2, 0.08).translate(fx, y + 0.4, bd / 2 + 0.06), cMat));
+                    bg.add(new THREE.Mesh(new THREE.BoxGeometry(fww, 1.2, 0.08).translate(fx, y + 0.4, -bd / 2 - 0.06), cMat));
+
+                    // Если горит свет, добавляем неоновый подоконник/блик
+                    if (isLit) {
+                        bg.add(new THREE.Mesh(new THREE.BoxGeometry(fww, 0.05, 0.15).translate(fx, y - 0.2, bd / 2 + 0.08), activeWinMat));
+                    }
+                }
+            }
+            
+            // Боковое длинное стекло (как лента-лифт)
+            if (Math.random() < 0.6) {
+                const sw = bd * 0.5;
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, bhBase * 0.6, sw).translate(bw / 2 + 0.05, bhBase * 0.5, 0), matGlass));
+                bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, bhBase * 0.6, sw).translate(-bw / 2 - 0.05, bhBase * 0.5, 0), matGlass));
+            }
+        } else {
+             bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw*0.8, 3, bd*0.8).translate(0, bhBase + 1.5, 0), matCityRoof));
         }
-        } // end !isMobile
 
         bg.position.z = zCursor + bd / 2;
         group.add(bg);
-        zCursor += bd + Math.random() * 0.3;
+        zCursor += bd + Math.random() * 0.5;
     }
 
     const totalZ = zCursor;
@@ -1511,7 +1530,7 @@ function makeHayBale() {
 // Магазин со светящейся вывеской
 function makeShop() {
     const g = new THREE.Group();
-    const shopColors = [0xBCAAA4,0xCFD8DC,0xD7CCC8,0xE0E0E0];
+    const shopColors = [0x9C27B0,0x03A9F4,0xE91E63,0xFF9800];
     const wallColor = shopColors[Math.floor(Math.random()*shopColors.length)];
     // Стены
     g.add(new THREE.Mesh(new THREE.BoxGeometry(4,3,3).translate(0,1.5,0), M(wallColor)));
@@ -1537,18 +1556,18 @@ function makeShop() {
 // Заправка со светящимся лого
 function makeGasStationLit() {
     const g = new THREE.Group();
-    // Здание
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(3,2.5,2.5).translate(0,1.25,-2), M(0xECEFF1)));
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2,0.15,2.7).translate(0,2.55,-2), M(0x616161)));
+    // Здание (яркое)
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(3,2.5,2.5).translate(0,1.25,-2), M(0x03A9F4)));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(3.2,0.15,2.7).translate(0,2.55,-2), M(0xE91E63)));
     // Витрина
     const glassMat = new THREE.MeshStandardMaterial({color:0xBBDDFF,flatShading:true,transparent:true,opacity:0.4});
     g.add(new THREE.Mesh(new THREE.BoxGeometry(1.8,1.2,0.08).translate(0,1.2,-0.74), glassMat));
     g.add(new THREE.Mesh(new THREE.BoxGeometry(0.7,1.5,0.08).translate(-0.9,0.75,-0.74), M(0x5D4037)));
     // Навес
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(5,0.15,4).translate(0,3.5,1), M(0xF5F5F5)));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(5,0.15,4).translate(0,3.5,1), M(0x3F51B5)));
     // Колонны навеса
     [[-2,1.5],[2,1.5],[-2,3],[2,3]].forEach(p => {
-        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,3.5,6).translate(p[0],1.75,p[1]), M(0xBDBDBD)));
+        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,3.5,6).translate(p[0],1.75,p[1]), M(0xFFEB3B)));
     });
     // Колонки бензина
     [-0.8,0.8].forEach(x => {
