@@ -3192,9 +3192,9 @@ function updateCopMode(dt, moveZ, playerX) {
     state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 3 * dt;
     const crimXSmooth = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[2] - LANE_X[0]) / 2;
 
-    // Gentle lean when turning
-    const laneDelta = state.criminalLaneSmooth - prevSmooth;
-    criminalCar.rotation.z = -laneDelta * 4;
+    // Gentle lean when turning — target based on lane difference, smoothly interpolated
+    const targetLean = -(state.criminalLane - state.criminalLaneSmooth) * 0.15;
+    criminalCar.rotation.z += (targetLean - criminalCar.rotation.z) * 3 * dt;
 
     // Criminal moves relative to player
     state.criminalZ += (state.criminalSpeed - state.speed) * 0.4 * dt;
