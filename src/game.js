@@ -173,9 +173,9 @@ saveGarage();
 
 // ======================== BIOMES ========================
 const BIOMES = [
-    { name:'Шоссе', sky:0x4a90d9, fog:0x8ab8e8, ground:0x4CAF50, ambient:0x99aacc, dir:0xfff5e0, dirI:1.3, fogN:200, fogF:600, env:'highway' },
+    { name:'Шоссе', sky:0x81D4FA, fog:0x81D4FA, ground:0x00E676, ambient:0xffffff, dir:0xfffaee, dirI:1.2, fogN:200, fogF:600, env:'highway' },
     { name:'Город', sky:0x4DD0E1, fog:0xFF8A80, ground:0x4A148C, ambient:0xffffff, dir:0xffffff, dirI:1.6, fogN:100, fogF:600, env:'city' },
-    { name:'Каньон', sky:0xdd8844, fog:0xddaa77, ground:0xC49535, ambient:0xaa8866, dir:0xffddaa, dirI:1.5, fogN:200, fogF:600, env:'canyon' },
+    { name:'Каньон', sky:0xFF0055, fog:0xFF0055, ground:0x110022, ambient:0x5500aa, dir:0xff0088, dirI:1.8, fogN:150, fogF:600, env:'canyon' },
     { name:'Тоннель', sky:0x111118, fog:0x0a0a12, ground:0x333338, ambient:0x222233, dir:0x4466aa, dirI:0.2, fogN:40, fogF:150, env:'tunnel' },
     { name:'Ночь', sky:0x0a0a2e, fog:0x0a0a20, ground:0x151530, ambient:0x334466, dir:0x6688bb, dirI:0.5, fogN:100, fogF:400, env:'night' },
     { name:'Закат', sky:0xdd5533, fog:0xdd7755, ground:0x557744, ambient:0x995533, dir:0xffaa55, dirI:1.1, fogN:180, fogF:550, env:'sunset' },
@@ -1172,11 +1172,10 @@ function makeTree(c1=0x2E7D32,c2=0x4CAF50,trunk=0x795548) {
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1*sc,0.2*sc,h,6).translate(0,h/2,0), trunkMat));
     const foliageMat1 = c1===0x2E7D32 ? matGreen1 : M(c1);
     const foliageMat2 = c2===0x4CAF50 ? matGreen2 : M(c2);
-    // Main canopy - multiple overlapping spheres
-    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.9*sc,0).translate(0,h+0.6*sc,0), foliageMat1));
-    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.7*sc,0).translate(0.35*sc,h+1.1*sc,0.2*sc), foliageMat2));
-    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.6*sc,0).translate(-0.25*sc,h+1.0*sc,-0.15*sc), foliageMat1));
-    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.5*sc,5,4).translate(0.1*sc,h+1.5*sc,0.1*sc), foliageMat2));
+    // Main canopy - smooth stylized spheres (Ghibli style)
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(1.2*sc,1).translate(0,h+0.8*sc,0), foliageMat1));
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.8*sc,1).translate(0.5*sc,h+0.5*sc,0.4*sc), foliageMat2));
+    g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.7*sc,1).translate(-0.4*sc,h+0.6*sc,-0.3*sc), foliageMat1));
     return g;
 }
 
@@ -1280,14 +1279,13 @@ function makeBuilding(w,h,d,color,night=false) {
 
 function makeHouse() {
     const g = new THREE.Group();
-    const colors = [0xA1887F,0xBCAAA4,0xD7CCC8,0x8D6E63,0xC5B9A8,0xB39DDB];
-    const c = colors[Math.floor(Math.random()*colors.length)];
-    const wallMat = M(c);
+    // Low-poly pastel style (Ghibli/Animal Crossing)
+    const wallMat = M(0xFFFFFA);
     // Main body
     g.add(new THREE.Mesh(new THREE.BoxGeometry(3.5,2.5,3.5).translate(0,1.25,0), wallMat));
-    // Peaked roof (box triangulated by scaling)
+    // Peaked roof (steeper)
     const roofGeo = new THREE.BufferGeometry();
-    const rw=2.0, rh=1.2, rl=2.1;
+    const rw=2.2, rh=1.8, rl=2.2;
     const rv = new Float32Array([
         -rw,0,-rl, rw,0,-rl, rw,0,rl, -rw,0,rl,
         0,rh,-rl, 0,rh,rl
@@ -1296,24 +1294,25 @@ function makeHouse() {
     roofGeo.setAttribute('position', new THREE.BufferAttribute(rv,3));
     roofGeo.setIndex(ri);
     roofGeo.computeVertexNormals();
-    const roof = new THREE.Mesh(roofGeo, matRoof);
+    const roof = new THREE.Mesh(roofGeo, M(0xFF5722)); // Vibrant Terracotta
     roof.position.y = 2.5;
     g.add(roof);
     // Chimney
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.35,1.0,0.35).translate(0.8,3.2,0), matRockDark));
-    // Windows
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.1).translate(-0.8,1.5,1.76), matWindow));
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.6,0.6,0.1).translate(0.8,1.5,1.76), matWindow));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.4,1.4,0.4).translate(1.0,3.2,0), M(0xD84315)));
+    // Windows - Circular
+    const winMat = M(0x81D4FA);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.1,12).rotateX(Math.PI/2).translate(-0.8,1.5,1.76), winMat));
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.35,0.1,12).rotateX(Math.PI/2).translate(0.8,1.5,1.76), winMat));
     // Door
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.7,1.3,0.1).translate(0,0.65,1.76), matDoor));
-    // Small fence around
-    const fp = matFencePost;
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.7,1.3,0.1).translate(0,0.65,1.76), M(0x795548)));
+    // White fence
+    const fp = M(0xFFFFFF);
     [-2.2,2.2].forEach(x => {
-        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.8,5).translate(x,0.4,2.5), fp));
-        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.8,5).translate(x,0.4,-2.5), fp));
+        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.8,6).translate(x,0.4,2.5), fp));
+        g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.8,6).translate(x,0.4,-2.5), fp));
     });
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(4.4,0.06,0.06).translate(0,0.65,2.5), matFence));
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(4.4,0.06,0.06).translate(0,0.35,2.5), matFence));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(4.4,0.1,0.06).translate(0,0.65,2.5), fp));
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(4.4,0.1,0.06).translate(0,0.35,2.5), fp));
     return g;
 }
 
@@ -1393,7 +1392,22 @@ function makeBarrier() {
 }
 
 function makeRock(s=1) {
+    const isDesert = (typeof BIOMES !== 'undefined' && BIOMES[state.biomeIdx] && BIOMES[state.biomeIdx].env === 'canyon');
     const g = new THREE.Group();
+    if (isDesert) {
+        const geo = new THREE.DodecahedronGeometry(0.8*s, 0); 
+        const rockMat = M(0x100820); // Obsidian
+        const mesh = new THREE.Mesh(geo, rockMat);
+        mesh.position.y = 0.4*s;
+        mesh.scale.set(1, 2.5 + Math.random(), 1); 
+        g.add(mesh);
+        
+        const edgeGeo = new THREE.EdgesGeometry(geo);
+        const line = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({color: 0xFF0055}));
+        mesh.add(line);
+        return g;
+    }
+
     const geo = new THREE.DodecahedronGeometry(0.7*s, 1);
     // Vertex displacement for irregular natural shape
     const pos = geo.attributes.position;
@@ -1412,6 +1426,31 @@ function makeRock(s=1) {
 
 function makeCactus() {
     const g = new THREE.Group();
+    const isDesert = (typeof BIOMES !== 'undefined' && BIOMES[state.biomeIdx] && BIOMES[state.biomeIdx].env === 'canyon');
+    
+    if (isDesert) {
+        const cMat = M(0x110022); 
+        const emMat = ME(0x00E5FF, 1.5); // Cyan neon
+        // Main trunk
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.0, 0.4).translate(0,1.5,0), cMat));
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.1, 0.45).translate(0,1.5,0), emMat));
+        // Arms
+        const arm1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.3), cMat);
+        arm1.position.set(0.6, 1.2, 0);
+        g.add(arm1);
+        const arm1Up = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.0, 0.3), emMat);
+        arm1Up.position.set(1.05, 1.7, 0);
+        g.add(arm1Up);
+        
+        const arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.3), cMat);
+        arm2.position.set(-0.5, 2.0, 0);
+        g.add(arm2);
+        const arm2Up = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), ME(0xFF007F, 1.5)); // Magenta bloom
+        arm2Up.position.set(-0.85, 2.4, 0);
+        g.add(arm2Up);
+        return g;
+    }
+
     // Main trunk
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,3.0,6).translate(0,1.5,0), matCactus));
     // Arms at different angles
@@ -2599,7 +2638,8 @@ function applyBiomeInstant(b) {
     ambLight.color.set(b.ambient);
     dirLight.color.set(b.dir); dirLight.intensity = b.dirI;
     groundMat.color.set(b.ground);
-    roadMat.color.setHex(b.env === 'city' ? 0x2D1B42 : 0x3a3a3a);
+    const getRM = (env) => env==='city'?0x2D1B42:env==='canyon'?0x070014:env==='highway'?0x78909C:0x3a3a3a;
+    roadMat.color.setHex(getRM(b.env));
     hemiLight.color.set(b.sky); hemiLight.groundColor.set(b.ground);
     renderer.toneMappingExposure = b.dirI > 0.5 ? 1.1 : 0.7;
     const isNight = b.dirI < 0.6;
@@ -2621,8 +2661,9 @@ function updateBiomeTransition(dt) {
     dirLight.intensity = biomeFrom.dirI + (biomeTo.dirI - biomeFrom.dirI) * t;
     groundMat.color.copy(lerpColors(biomeFrom.ground, biomeTo.ground, t));
     
-    const roadColorFrom = biomeFrom.env === 'city' ? 0x2D1B42 : 0x3a3a3a;
-    const roadColorTo = biomeTo.env === 'city' ? 0x2D1B42 : 0x3a3a3a;
+    const getRM = (env) => env==='city'?0x2D1B42:env==='canyon'?0x070014:env==='highway'?0x78909C:0x3a3a3a;
+    const roadColorFrom = getRM(biomeFrom.env);
+    const roadColorTo = getRM(biomeTo.env);
     roadMat.color.copy(lerpColors(roadColorFrom, roadColorTo, t));
 
     hemiLight.color.copy(lerpColors(biomeFrom.sky, biomeTo.sky, t));
