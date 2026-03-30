@@ -118,6 +118,9 @@ const TEXTS = {
         m_dist1500:'Проедь 1500м без аварий', m_dist3000:'Проедь 3000м',
         m_nos3:'Используй NOS 3 раза', m_brake:'Затормози и уклонись 5 раз',
         m_duel:'Выиграй дуэль', m_police60:'Продержись 60с от полиции',
+        cop:'Коп', copDesc:'Догони преступника', ambulanceMode:'Скорая', ambulanceDesc:'Доставь пациента',
+        taxi:'Такси', taxiDesc:'Доставь клиента', timeUp:'ВРЕМЯ ВЫШЛО!',
+        delivered:'ДОСТАВЛЕНО!', caught:'ЗАДЕРЖАН!', escaped:'ПРЕСТУПНИК СБЕЖАЛ!',
     },
     en: {
         score:'Score', coins:'Coins', record:'Record', crash:'CRASH', arrested:'ARRESTED!',
@@ -147,6 +150,9 @@ const TEXTS = {
         m_dist1500:'Drive 1500m without crashing', m_dist3000:'Drive 3000m',
         m_nos3:'Use NOS 3 times', m_brake:'Brake-dodge 5 times',
         m_duel:'Win a duel', m_police60:'Survive police for 60s',
+        cop:'Cop', copDesc:'Catch the criminal', ambulanceMode:'Ambulance', ambulanceDesc:'Deliver the patient',
+        taxi:'Taxi', taxiDesc:'Deliver the client', timeUp:'TIME UP!',
+        delivered:'DELIVERED!', caught:'CAUGHT!', escaped:'CRIMINAL ESCAPED!',
     },
     tr: {
         score:'Skor', coins:'Jeton', record:'Rekor', crash:'KAZA', arrested:'YAKALANDI!',
@@ -176,6 +182,9 @@ const TEXTS = {
         m_dist1500:'Kazasiz 1500m sur', m_dist3000:'3000m sur',
         m_nos3:'NOS 3 kez kullan', m_brake:'Frenle ve 5 kez kacin',
         m_duel:'Duelloyu kazan', m_police60:'Polisten 60s dayam',
+        cop:'Polis', copDesc:'Suclyu yakala', ambulanceMode:'Ambulans', ambulanceDesc:'Hastayi yetistir',
+        taxi:'Taksi', taxiDesc:'Musteri gotir', timeUp:'SURE DOLDU!',
+        delivered:'TESLIM EDILDI!', caught:'YAKALANDI!', escaped:'SUCLU KACTI!',
     },
     pt: {
         score:'Pontos', coins:'Moedas', record:'Recorde', crash:'BATIDA', arrested:'PRESO!',
@@ -205,6 +214,9 @@ const TEXTS = {
         m_dist1500:'Dirija 1500m sem bater', m_dist3000:'Dirija 3000m',
         m_nos3:'Use NOS 3 vezes', m_brake:'Freie e desvie 5 vezes',
         m_duel:'Venca um duelo', m_police60:'Sobreviva 60s da policia',
+        cop:'Policial', copDesc:'Pegue o criminoso', ambulanceMode:'Ambulancia', ambulanceDesc:'Entregue o paciente',
+        taxi:'Taxi', taxiDesc:'Entregue o cliente', timeUp:'TEMPO ESGOTADO!',
+        delivered:'ENTREGUE!', caught:'CAPTURADO!', escaped:'CRIMINOSO FUGIU!',
     },
     es: {
         score:'Puntos', coins:'Monedas', record:'Record', crash:'CHOQUE', arrested:'DETENIDO!',
@@ -234,6 +246,9 @@ const TEXTS = {
         m_dist1500:'Conduce 1500m sin chocar', m_dist3000:'Conduce 3000m',
         m_nos3:'Usa NOS 3 veces', m_brake:'Frena y esquiva 5 veces',
         m_duel:'Gana un duelo', m_police60:'Sobrevive 60s de la policia',
+        cop:'Policia', copDesc:'Atrapa al criminal', ambulanceMode:'Ambulancia', ambulanceDesc:'Entrega al paciente',
+        taxi:'Taxi', taxiDesc:'Lleva al cliente', timeUp:'SE ACABO EL TIEMPO!',
+        delivered:'ENTREGADO!', caught:'ATRAPADO!', escaped:'EL CRIMINAL ESCAPO!',
     },
 };
 function t(key) { return (TEXTS[gameLang] && TEXTS[gameLang][key]) || (TEXTS['en'] && TEXTS['en'][key]) || key; }
@@ -2117,6 +2132,10 @@ const state = {
     duelFinish: 2000,
     // Fuel mode
     fuel: 100, fuelCanisters: [], fuelTimer: 0,
+    // Cop mode
+    criminalZ: 0, criminalLane: 1, criminalLaneSmooth: 1, criminalSpeed: 0, copTimer: 0,
+    // Ambulance/Taxi mode
+    missionTimer: 0, missionDist: 0,
 };
 
 // ======================== RENDERER & SCENE ========================
@@ -2228,7 +2247,6 @@ const weatherParticles = new WeatherParticles(scene);
 // ======================== UI ========================
 const ui = {
     score: document.getElementById('score-val'),
-    speed: document.getElementById('speed-val'),
     coins: document.getElementById('coins-val'),
     combo: document.getElementById('combo-display'),
     nearMiss: document.getElementById('near-miss'),
@@ -2251,12 +2269,16 @@ const ui = {
     fuelUI: document.getElementById('fuel-ui'),
     fuelBar: document.getElementById('fuel-bar-fill'),
     fuelWarning: document.getElementById('fuel-warning'),
+    copUI: document.getElementById('cop-ui'),
+    copDist: document.getElementById('cop-dist'),
+    timerUI: document.getElementById('timer-ui'),
+    timerIcon: document.getElementById('timer-icon'),
+    timerValue: document.getElementById('timer-value'),
     pause: document.getElementById('pause'),
     hud: document.getElementById('hud'),
     hudPauseBtn: document.getElementById('hud-pause-btn'),
     hudMuteBtn: document.getElementById('hud-mute-btn'),
     secondLife: document.getElementById('second-life'),
-    weatherIcon: document.getElementById('weather-icon'),
 };
 
 function showBiome(n) { ui.biome.textContent = n; ui.biome.classList.add('show'); setTimeout(()=>ui.biome.classList.remove('show'),3000); }
@@ -2813,6 +2835,9 @@ function resetGame() {
     ui.chaseUI.style.display = 'none';
     ui.duelUI.style.display = 'none';
     ui.fuelUI.style.display = 'none';
+    ui.copUI.style.display = 'none';
+    ui.timerUI.style.display = 'none';
+    if (criminalCar) { scene.remove(criminalCar); criminalCar = null; }
     ui.fuelWarning.style.opacity = '0';
     if (ui.secondLife) ui.secondLife.style.display = 'none';
 
@@ -2832,6 +2857,23 @@ function resetGame() {
     } else if (state.mode === 'fuel') {
         ui.fuelUI.style.display = 'block';
         state.fuel = 100;
+    } else if (state.mode === 'cop') {
+        ui.copUI.style.display = 'block';
+        // Spawn criminal car ahead
+        if (criminalCar) scene.remove(criminalCar);
+        criminalCar = buildSportsCar ? buildSportsCar(0x111111) : buildSedan(0x111111);
+        criminalCar.position.set(LANE_X[1], 0, 30);
+        scene.add(criminalCar);
+        state.criminalZ = 30;
+        state.criminalLane = 1;
+        state.criminalLaneSmooth = 1;
+        state.criminalSpeed = 0;
+        state.copTimer = 0;
+    } else if (state.mode === 'ambulance' || state.mode === 'taxi') {
+        ui.timerUI.style.display = 'block';
+        ui.timerIcon.textContent = state.mode === 'ambulance' ? '🚑' : '🚕';
+        state.missionTimer = state.mode === 'ambulance' ? 60 : 50;
+        state.missionDist = 0;
     }
 }
 
@@ -3063,6 +3105,96 @@ function updateFuelMode(dt, playerX) {
     // Game over — бензин кончился
     if (state.fuel <= 0) {
         gameOver(t('fuelEmpty'));
+    }
+}
+
+// ======================== COP MODE ========================
+let criminalCar = null;
+
+function updateCopMode(dt, moveZ, playerX) {
+    if (!criminalCar) return;
+
+    // Criminal AI: drives ahead, changes lanes randomly, tries to escape
+    state.copTimer += dt;
+    state.criminalSpeed = Math.min(state.speed * 1.05, state.speed + 15); // slightly faster or matching
+
+    // Random lane changes
+    if (Math.random() < 0.8 * dt) {
+        const newLane = Math.floor(Math.random() * 3);
+        state.criminalLane = newLane;
+    }
+
+    // Smooth lane movement
+    state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 5 * dt;
+    const crimX = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[1] - LANE_X[0]);
+
+    // Criminal moves forward relative to player
+    state.criminalZ += (state.criminalSpeed - state.speed) * 0.4 * dt;
+    const crimWorldZ = state.dist + state.criminalZ;
+
+    criminalCar.position.set(crimX, 0, crimWorldZ);
+    criminalCar.visible = true;
+
+    // UI: distance to criminal
+    const gap = Math.abs(state.criminalZ);
+    if (ui.copDist) ui.copDist.textContent = Math.floor(gap);
+
+    // Color warning based on distance
+    if (ui.copUI) {
+        if (gap < 10) ui.copUI.style.borderColor = '#76FF03';
+        else if (gap < 30) ui.copUI.style.borderColor = '#FFD740';
+        else ui.copUI.style.borderColor = '#FF1744';
+    }
+
+    // Catch: player reaches criminal
+    if (state.criminalZ <= 4 && state.criminalZ >= -2) {
+        const cdx = Math.abs(playerX - crimX);
+        if (cdx < 2.0) {
+            // Caught!
+            gameWin(t('caught'));
+            return;
+        }
+    }
+
+    // Criminal escapes if too far ahead
+    if (state.criminalZ > 80) {
+        gameLose(t('escaped'));
+    }
+}
+
+// ======================== AMBULANCE / TAXI MODE ========================
+function updateTimerMode(dt) {
+    state.missionTimer -= dt;
+    state.missionDist += state.speed * 0.4 * dt;
+
+    // UI
+    if (ui.timerValue) {
+        const secs = Math.max(0, Math.ceil(state.missionTimer));
+        ui.timerValue.textContent = secs;
+        // Flash red when low
+        if (secs <= 10) {
+            ui.timerUI.style.borderColor = '#FF1744';
+            ui.timerUI.style.color = '#FF5252';
+        } else {
+            ui.timerUI.style.borderColor = 'rgba(255,255,255,0.2)';
+            ui.timerUI.style.color = '#fff';
+        }
+    }
+
+    // Target distance: 3000m for ambulance, 2500m for taxi
+    const targetDist = state.mode === 'ambulance' ? 3000 : 2500;
+
+    // Win: reached destination
+    if (state.missionDist >= targetDist) {
+        const bonus = Math.floor(state.missionTimer * 10); // time bonus
+        state.coins += bonus;
+        gameWin(t('delivered'));
+        return;
+    }
+
+    // Lose: time ran out
+    if (state.missionTimer <= 0) {
+        gameLose(t('timeUp'));
     }
 }
 
@@ -3998,6 +4130,10 @@ function loop() {
             updateDuelRace(dt, moveZ);
         } else if (state.mode === 'fuel') {
             updateFuelMode(dt, playerX);
+        } else if (state.mode === 'cop') {
+            updateCopMode(dt, moveZ, playerX);
+        } else if (state.mode === 'ambulance' || state.mode === 'taxi') {
+            updateTimerMode(dt);
         }
 
         // Invincibility timer (after second life)
@@ -4042,9 +4178,9 @@ function loop() {
 
         // UI
         ui.score.textContent=state.score;
-        ui.speed.textContent=Math.floor(state.speed);
+        if (ui.speed) ui.speed.textContent=Math.floor(state.speed); // Safeguard
         ui.coins.textContent=state.coins;
-        ui.speedOverlay.style.opacity=Math.max(0,(state.speed-60)/120);
+        if (ui.speedOverlay) ui.speedOverlay.style.opacity=Math.max(0,(state.speed-60)/120);
         // Спидометр — стрелка
         updateSpeedometer(state.speed);
     }
@@ -4219,6 +4355,9 @@ document.getElementById('btn-endless').onclick = () => startGame('endless');
 document.getElementById('btn-chase').onclick = () => startGame('chase');
 document.getElementById('btn-duel').onclick = () => startGame('duel');
 document.getElementById('btn-fuel').onclick = () => startGame('fuel');
+document.getElementById('btn-cop').onclick = () => startGame('cop');
+document.getElementById('btn-ambulance').onclick = () => startGame('ambulance');
+document.getElementById('btn-taxi').onclick = () => startGame('taxi');
 document.getElementById('btn-restart').onclick = () => {
     startGame(state.mode);
 };
@@ -4329,8 +4468,8 @@ function applyTranslations() {
     if (scoreLabel) scoreLabel.textContent = t('score');
     if (coinsLabel) coinsLabel.textContent = t('coins');
     // Menu mode buttons
-    const modeMap = {endless:'endless',chase:'chase',duel:'duel',fuel:'fuel'};
-    const descMap = {endless:'endlessDesc',chase:'chaseDesc',duel:'duelDesc',fuel:'fuelDesc'};
+    const modeMap = {endless:'endless',chase:'chase',duel:'duel',fuel:'fuel',cop:'cop',ambulance:'ambulanceMode',taxi:'taxi'};
+    const descMap = {endless:'endlessDesc',chase:'chaseDesc',duel:'duelDesc',fuel:'fuelDesc',cop:'copDesc',ambulance:'ambulanceDesc',taxi:'taxiDesc'};
     for (const [id, key] of Object.entries(modeMap)) {
         const btn = document.getElementById('btn-'+id);
         if (btn) {
