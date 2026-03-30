@@ -8,16 +8,24 @@ let ysdk = null;
 let yPlayer = null;
 let gameOverCount = 0;
 let lastAdTime = 0;
+let adThreshold = 3; // чередуется 3 → 4 → 3 → 4
 const AD_COOLDOWN = 60000;
-const AD_EVERY_N = 2;
 
 async function initYandexSDK() {
     try {
         ysdk = await YaGames.init();
+        // Detect language
+        try {
+            const lang = ysdk.environment.i18n.lang;
+            gameLang = TEXTS[lang] ? lang : 'en';
+        } catch(e) {}
         try { yPlayer = await ysdk.getPlayer({ scopes: false }); } catch(e) {}
         await loadCloudSaves();
     } catch(e) {
         console.warn('Yandex SDK not available');
+        // Fallback: detect from browser
+        const bl = (navigator.language || '').slice(0,2);
+        gameLang = TEXTS[bl] ? bl : 'en';
     }
 }
 
@@ -79,9 +87,164 @@ async function loadCloudSaves() {
     } catch(e) {}
 }
 
+// ======================== i18n ========================
+let gameLang = 'ru';
+const TEXTS = {
+    ru: {
+        score:'Счёт', coins:'Монеты', record:'Рекорд', crash:'АВАРИЯ', arrested:'ЗАДЕРЖАН!',
+        fuelEmpty:'БЕНЗИН КОНЧИЛСЯ!', restart:'ЕЩЁ РАЗ', menu:'МЕНЮ', pause:'ПАУЗА',
+        resume:'ПРОДОЛЖИТЬ', back:'НАЗАД', garage:'ТЮНИНГ И ГАРАЖ', garageTitle:'ГАРАЖ',
+        dailyMissions:'ЗАДАНИЯ ДНЯ', controlsHint:'КЛАВИАТУРА ИЛИ СВАЙП ДЛЯ УПРАВЛЕНИЯ',
+        newRecord:'НОВЫЙ РЕКОРД!', doubleCoins:'УДВОИТЬ МОНЕТЫ x2',
+        secondLifeYes:'ПРОДОЛЖИТЬ', secondLifeNo:'НЕТ', secondLifeTitle:'АВАРИЯ!',
+        secondLifeAsk:'Хочешь продолжить?',
+        nearMiss:'+50 NEAR MISS!', fuelLow:'БЕНЗИН НА ИСХОДЕ!', fuelLabel:'БЕНЗИН',
+        stats: (c,d,b) => `Монеты: ${c}  |  Обгоны: ${d}  |  Локации: ${b}`,
+        statsShort: (c,d) => `Монеты: ${c}  |  Обгоны: ${d}`,
+        streak: (s,m) => `Серия: ${s} побед! Монеты x${m}`,
+        inProgress:'В процессе...', claim:'Забрать!', claimed:'Получено',
+        endless:'Бесконечная', chase:'Погоня', duel:'Дуэль', fuel:'Бензин',
+        endlessDesc:'Трафик и Монеты', chaseDesc:'Уйди от копов',
+        duelDesc:'Гонка на 2000м', fuelDesc:'Контроль топлива',
+        sedan:'Седан', pickup:'Пикап', sports:'Спорткар', suv:'Внедорожник',
+        ambulance:'Скорая', firetruck:'Пожарная', police2:'Полицейская',
+        blue:'Синий', red:'Красный', green:'Зелёный', black:'Чёрный',
+        white:'Белый', orange:'Оранжевый', purple:'Фиолетовый', gold:'Золотой',
+        engine:'Двигатель', brakes:'Тормоза', nos:'Нитро', handling:'Манёвренность', tank:'Бак', magnet:'Магнит',
+        body:'Кузов', color:'Цвет', upgrades:'Апгрейды',
+        m_coins30:'Собери 30 монет за гонку', m_coins50:'Собери 50 монет за гонку',
+        m_dodge15:'Обгони 15 машин вплотную', m_dodge25:'Обгони 25 машин вплотную',
+        m_score2000:'Набери 2000 очков', m_score5000:'Набери 5000 очков',
+        m_dist1500:'Проедь 1500м без аварий', m_dist3000:'Проедь 3000м',
+        m_nos3:'Используй NOS 3 раза', m_brake:'Затормози и уклонись 5 раз',
+        m_duel:'Выиграй дуэль', m_police60:'Продержись 60с от полиции',
+    },
+    en: {
+        score:'Score', coins:'Coins', record:'Record', crash:'CRASH', arrested:'ARRESTED!',
+        fuelEmpty:'OUT OF FUEL!', restart:'RETRY', menu:'MENU', pause:'PAUSED',
+        resume:'RESUME', back:'BACK', garage:'TUNING & GARAGE', garageTitle:'GARAGE',
+        dailyMissions:'DAILY MISSIONS', controlsHint:'KEYBOARD OR SWIPE TO CONTROL',
+        newRecord:'NEW RECORD!', doubleCoins:'DOUBLE COINS x2',
+        secondLifeYes:'CONTINUE', secondLifeNo:'NO', secondLifeTitle:'CRASHED!',
+        secondLifeAsk:'Want to continue?',
+        nearMiss:'+50 NEAR MISS!', fuelLow:'LOW FUEL!', fuelLabel:'FUEL',
+        stats: (c,d,b) => `Coins: ${c}  |  Dodges: ${d}  |  Zones: ${b}`,
+        statsShort: (c,d) => `Coins: ${c}  |  Dodges: ${d}`,
+        streak: (s,m) => `Streak: ${s} wins! Coins x${m}`,
+        inProgress:'In progress...', claim:'Claim!', claimed:'Claimed',
+        endless:'Endless', chase:'Chase', duel:'Duel', fuel:'Fuel',
+        endlessDesc:'Traffic & Coins', chaseDesc:'Escape the cops',
+        duelDesc:'Race to 2000m', fuelDesc:'Fuel management',
+        sedan:'Sedan', pickup:'Pickup', sports:'Sports Car', suv:'SUV',
+        ambulance:'Ambulance', firetruck:'Fire Truck', police2:'Police Car',
+        blue:'Blue', red:'Red', green:'Green', black:'Black',
+        white:'White', orange:'Orange', purple:'Purple', gold:'Gold',
+        engine:'Engine', brakes:'Brakes', nos:'Nitro', handling:'Handling', tank:'Tank', magnet:'Magnet',
+        body:'Body', color:'Color', upgrades:'Upgrades',
+        m_coins30:'Collect 30 coins in a race', m_coins50:'Collect 50 coins in a race',
+        m_dodge15:'Dodge 15 cars closely', m_dodge25:'Dodge 25 cars closely',
+        m_score2000:'Score 2000 points', m_score5000:'Score 5000 points',
+        m_dist1500:'Drive 1500m without crashing', m_dist3000:'Drive 3000m',
+        m_nos3:'Use NOS 3 times', m_brake:'Brake-dodge 5 times',
+        m_duel:'Win a duel', m_police60:'Survive police for 60s',
+    },
+    tr: {
+        score:'Skor', coins:'Jeton', record:'Rekor', crash:'KAZA', arrested:'YAKALANDI!',
+        fuelEmpty:'YAKIT BITTI!', restart:'TEKRAR', menu:'MENU', pause:'DURAKLAT',
+        resume:'DEVAM', back:'GERI', garage:'GARAJ VE TUNING', garageTitle:'GARAJ',
+        dailyMissions:'GUNLUK GOREVLER', controlsHint:'KLAVYE VEYA KAYDIR',
+        newRecord:'YENI REKOR!', doubleCoins:'JETONLARI 2X YAP',
+        secondLifeYes:'DEVAM', secondLifeNo:'HAYIR', secondLifeTitle:'KAZA!',
+        secondLifeAsk:'Devam etmek ister misin?',
+        nearMiss:'+50 NEAR MISS!', fuelLow:'YAKIT AZALIYOR!', fuelLabel:'YAKIT',
+        stats: (c,d,b) => `Jeton: ${c}  |  Gecis: ${d}  |  Bolge: ${b}`,
+        statsShort: (c,d) => `Jeton: ${c}  |  Gecis: ${d}`,
+        streak: (s,m) => `Seri: ${s} galibiyet! Jeton x${m}`,
+        inProgress:'Devam ediyor...', claim:'Al!', claimed:'Alindi',
+        endless:'Sonsuz', chase:'Kovalamaca', duel:'Duello', fuel:'Yakit',
+        endlessDesc:'Trafik ve Jeton', chaseDesc:'Polisten kac',
+        duelDesc:'2000m yaris', fuelDesc:'Yakit yonetimi',
+        sedan:'Sedan', pickup:'Pikap', sports:'Spor Araba', suv:'SUV',
+        ambulance:'Ambulans', firetruck:'Itfaiye', police2:'Polis Arabasi',
+        blue:'Mavi', red:'Kirmizi', green:'Yesil', black:'Siyah',
+        white:'Beyaz', orange:'Turuncu', purple:'Mor', gold:'Altin',
+        engine:'Motor', brakes:'Fren', nos:'Nitro', handling:'Manevra', tank:'Depo', magnet:'Miknatls',
+        body:'Govde', color:'Renk', upgrades:'Yukseltme',
+        m_coins30:'Yarista 30 jeton topla', m_coins50:'Yarista 50 jeton topla',
+        m_dodge15:'15 arabayi yakindan gec', m_dodge25:'25 arabayi yakindan gec',
+        m_score2000:'2000 puan kazan', m_score5000:'5000 puan kazan',
+        m_dist1500:'Kazasiz 1500m sur', m_dist3000:'3000m sur',
+        m_nos3:'NOS 3 kez kullan', m_brake:'Frenle ve 5 kez kacin',
+        m_duel:'Duelloyu kazan', m_police60:'Polisten 60s dayam',
+    },
+    pt: {
+        score:'Pontos', coins:'Moedas', record:'Recorde', crash:'BATIDA', arrested:'PRESO!',
+        fuelEmpty:'SEM COMBUSTIVEL!', restart:'TENTAR DE NOVO', menu:'MENU', pause:'PAUSADO',
+        resume:'CONTINUAR', back:'VOLTAR', garage:'GARAGEM E TUNING', garageTitle:'GARAGEM',
+        dailyMissions:'MISSOES DIARIAS', controlsHint:'TECLADO OU DESLIZE PARA CONTROLAR',
+        newRecord:'NOVO RECORDE!', doubleCoins:'DOBRAR MOEDAS x2',
+        secondLifeYes:'CONTINUAR', secondLifeNo:'NAO', secondLifeTitle:'BATIDA!',
+        secondLifeAsk:'Quer continuar?',
+        nearMiss:'+50 NEAR MISS!', fuelLow:'POUCO COMBUSTIVEL!', fuelLabel:'COMBUSTIVEL',
+        stats: (c,d,b) => `Moedas: ${c}  |  Desvios: ${d}  |  Zonas: ${b}`,
+        statsShort: (c,d) => `Moedas: ${c}  |  Desvios: ${d}`,
+        streak: (s,m) => `Sequencia: ${s} vitorias! Moedas x${m}`,
+        inProgress:'Em andamento...', claim:'Resgatar!', claimed:'Resgatado',
+        endless:'Infinito', chase:'Perseguicao', duel:'Duelo', fuel:'Combustivel',
+        endlessDesc:'Trafego e Moedas', chaseDesc:'Fuja da policia',
+        duelDesc:'Corrida de 2000m', fuelDesc:'Controle de combustivel',
+        sedan:'Seda', pickup:'Picape', sports:'Esportivo', suv:'SUV',
+        ambulance:'Ambulancia', firetruck:'Bombeiro', police2:'Policia',
+        blue:'Azul', red:'Vermelho', green:'Verde', black:'Preto',
+        white:'Branco', orange:'Laranja', purple:'Roxo', gold:'Dourado',
+        engine:'Motor', brakes:'Freios', nos:'Nitro', handling:'Direcao', tank:'Tanque', magnet:'Ima',
+        body:'Carroceria', color:'Cor', upgrades:'Upgrades',
+        m_coins30:'Colete 30 moedas', m_coins50:'Colete 50 moedas',
+        m_dodge15:'Desvie de 15 carros', m_dodge25:'Desvie de 25 carros',
+        m_score2000:'Faca 2000 pontos', m_score5000:'Faca 5000 pontos',
+        m_dist1500:'Dirija 1500m sem bater', m_dist3000:'Dirija 3000m',
+        m_nos3:'Use NOS 3 vezes', m_brake:'Freie e desvie 5 vezes',
+        m_duel:'Venca um duelo', m_police60:'Sobreviva 60s da policia',
+    },
+    es: {
+        score:'Puntos', coins:'Monedas', record:'Record', crash:'CHOQUE', arrested:'DETENIDO!',
+        fuelEmpty:'SIN COMBUSTIBLE!', restart:'REINTENTAR', menu:'MENU', pause:'PAUSA',
+        resume:'CONTINUAR', back:'ATRAS', garage:'GARAJE Y TUNING', garageTitle:'GARAJE',
+        dailyMissions:'MISIONES DIARIAS', controlsHint:'TECLADO O DESLIZA PARA CONTROLAR',
+        newRecord:'NUEVO RECORD!', doubleCoins:'DOBLAR MONEDAS x2',
+        secondLifeYes:'CONTINUAR', secondLifeNo:'NO', secondLifeTitle:'CHOQUE!',
+        secondLifeAsk:'Quieres continuar?',
+        nearMiss:'+50 NEAR MISS!', fuelLow:'POCO COMBUSTIBLE!', fuelLabel:'COMBUSTIBLE',
+        stats: (c,d,b) => `Monedas: ${c}  |  Esquivos: ${d}  |  Zonas: ${b}`,
+        statsShort: (c,d) => `Monedas: ${c}  |  Esquivos: ${d}`,
+        streak: (s,m) => `Racha: ${s} victorias! Monedas x${m}`,
+        inProgress:'En progreso...', claim:'Reclamar!', claimed:'Reclamado',
+        endless:'Infinito', chase:'Persecucion', duel:'Duelo', fuel:'Combustible',
+        endlessDesc:'Trafico y Monedas', chaseDesc:'Escapa de la policia',
+        duelDesc:'Carrera de 2000m', fuelDesc:'Control de combustible',
+        sedan:'Sedan', pickup:'Pickup', sports:'Deportivo', suv:'SUV',
+        ambulance:'Ambulancia', firetruck:'Bombero', police2:'Policia',
+        blue:'Azul', red:'Rojo', green:'Verde', black:'Negro',
+        white:'Blanco', orange:'Naranja', purple:'Morado', gold:'Dorado',
+        engine:'Motor', brakes:'Frenos', nos:'Nitro', handling:'Manejo', tank:'Tanque', magnet:'Iman',
+        body:'Carroceria', color:'Color', upgrades:'Mejoras',
+        m_coins30:'Recoge 30 monedas', m_coins50:'Recoge 50 monedas',
+        m_dodge15:'Esquiva 15 autos', m_dodge25:'Esquiva 25 autos',
+        m_score2000:'Consigue 2000 puntos', m_score5000:'Consigue 5000 puntos',
+        m_dist1500:'Conduce 1500m sin chocar', m_dist3000:'Conduce 3000m',
+        m_nos3:'Usa NOS 3 veces', m_brake:'Frena y esquiva 5 veces',
+        m_duel:'Gana un duelo', m_police60:'Sobrevive 60s de la policia',
+    },
+};
+function t(key) { return (TEXTS[gameLang] && TEXTS[gameLang][key]) || (TEXTS['en'] && TEXTS['en'][key]) || key; }
+
 function onGameEnd() {
     gameOverCount++;
-    if (gameOverCount % AD_EVERY_N === 0) showInterstitialAd();
+    if (gameOverCount >= adThreshold) {
+        showInterstitialAd();
+        gameOverCount = 0;
+        adThreshold = adThreshold === 3 ? 4 : 3; // чередование 3 → 4 → 3 → 4
+    }
     saveToCloud();
 }
 
@@ -256,8 +419,8 @@ saveGarage();
 // ======================== BIOMES ========================
 const BIOMES = [
     { name:'Шоссе', sky:0x81D4FA, fog:0x81D4FA, ground:0x00E676, ambient:0xffffff, dir:0xfffaee, dirI:1.2, fogN:200, fogF:600, env:'highway' },
-    { name:'Город', sky:0x4DD0E1, fog:0xFF8A80, ground:0x4A148C, ambient:0xffffff, dir:0xffffff, dirI:1.6, fogN:100, fogF:600, env:'city' },
-    { name:'Каньон', sky:0xFF0055, fog:0xFF0055, ground:0x110022, ambient:0x5500aa, dir:0xff0088, dirI:1.8, fogN:150, fogF:600, env:'canyon' },
+    { name:'Город', sky:0x87CEEB, fog:0x87CEEB, ground:0x6B7A83, ambient:0xffffff, dir:0xfff0dd, dirI:1.4, fogN:100, fogF:600, env:'city' },
+    { name:'Каньон', sky:0xFFCC80, fog:0xFFB74D, ground:0xD84315, ambient:0xffe0b2, dir:0xffcc80, dirI:1.5, fogN:150, fogF:600, env:'canyon' },
     { name:'Тоннель', sky:0x111118, fog:0x0a0a12, ground:0x333338, ambient:0x222233, dir:0x4466aa, dirI:0.2, fogN:40, fogF:150, env:'tunnel' },
     { name:'Ночь', sky:0x0a0a2e, fog:0x0a0a20, ground:0x151530, ambient:0x334466, dir:0x6688bb, dirI:0.5, fogN:100, fogF:400, env:'night' },
     { name:'Закат', sky:0xdd5533, fog:0xdd7755, ground:0x557744, ambient:0x995533, dir:0xffaa55, dirI:1.1, fogN:180, fogF:550, env:'sunset' },
@@ -265,18 +428,18 @@ const BIOMES = [
 
 // ======================== DAILY MISSIONS ========================
 const MISSIONS_POOL = [
-    { id:'collect_coins_30', desc:'Собери 30 монет за гонку', check: s => s.coins >= 30, reward: 50 },
-    { id:'collect_coins_50', desc:'Собери 50 монет за гонку', check: s => s.coins >= 50, reward: 100 },
-    { id:'dodge_15', desc:'Обгони 15 машин вплотную', check: s => s.dodged >= 15, reward: 75 },
-    { id:'dodge_25', desc:'Обгони 25 машин вплотную', check: s => s.dodged >= 25, reward: 120 },
-    { id:'score_2000', desc:'Набери 2000 очков', check: s => s.score >= 2000, reward: 80 },
-    { id:'score_5000', desc:'Набери 5000 очков', check: s => s.score >= 5000, reward: 150 },
-    { id:'dist_1500', desc:'Проедь 1500м без аварий', check: s => s.dist >= 1500/0.4, reward: 60 },
-    { id:'dist_3000', desc:'Проедь 3000м', check: s => s.dist >= 3000/0.4, reward: 100 },
-    { id:'use_nos_3', desc:'Используй NOS 3 раза', check: s => s.nosUseCount >= 3, reward: 40 },
-    { id:'brake_dodge', desc:'Затормози и уклонись 5 раз', check: s => s.brakeDodges >= 5, reward: 60 },
-    { id:'win_duel', desc:'Выиграй дуэль', check: s => s.duelWon === true, reward: 100 },
-    { id:'survive_police_60', desc:'Продержись 60с от полиции', check: s => s.policeTimer > 65, reward: 120 },
+    { id:'collect_coins_30', i18n:'m_coins30', check: s => s.coins >= 30, reward: 50 },
+    { id:'collect_coins_50', i18n:'m_coins50', check: s => s.coins >= 50, reward: 100 },
+    { id:'dodge_15', i18n:'m_dodge15', check: s => s.dodged >= 15, reward: 75 },
+    { id:'dodge_25', i18n:'m_dodge25', check: s => s.dodged >= 25, reward: 120 },
+    { id:'score_2000', i18n:'m_score2000', check: s => s.score >= 2000, reward: 80 },
+    { id:'score_5000', i18n:'m_score5000', check: s => s.score >= 5000, reward: 150 },
+    { id:'dist_1500', i18n:'m_dist1500', check: s => s.dist >= 1500/0.4, reward: 60 },
+    { id:'dist_3000', i18n:'m_dist3000', check: s => s.dist >= 3000/0.4, reward: 100 },
+    { id:'use_nos_3', i18n:'m_nos3', check: s => s.nosUseCount >= 3, reward: 40 },
+    { id:'brake_dodge', i18n:'m_brake', check: s => s.brakeDodges >= 5, reward: 60 },
+    { id:'win_duel', i18n:'m_duel', check: s => s.duelWon === true, reward: 100 },
+    { id:'survive_police_60', i18n:'m_police60', check: s => s.policeTimer > 65, reward: 120 },
 ];
 
 function getTodayStr() {
@@ -338,11 +501,11 @@ function renderMissions() {
 
         let statusText = '';
         let statusCls = 'mission-status ';
-        if (m.claimed) { statusText = '\u2713 Получено'; statusCls += 'claimed-text'; }
-        else if (m.completed) { statusText = '\u2191 Забрать!'; statusCls += 'completed'; }
-        else { statusText = 'В процессе...'; statusCls += 'pending'; }
+        if (m.claimed) { statusText = '\u2713 ' + t('claimed'); statusCls += 'claimed-text'; }
+        else if (m.completed) { statusText = '\u2191 ' + t('claim'); statusCls += 'completed'; }
+        else { statusText = t('inProgress'); statusCls += 'pending'; }
 
-        card.innerHTML = '<div class="mission-desc">' + def.desc + '</div>' +
+        card.innerHTML = '<div class="mission-desc">' + (def.i18n ? t(def.i18n) : def.desc) + '</div>' +
             '<div class="mission-reward">\uD83E\uDE99 ' + def.reward + '</div>' +
             '<div class="' + statusCls + '">' + statusText + '</div>';
 
@@ -371,13 +534,14 @@ class WeatherParticles {
         this.type = 'clear';
         this.rainPool = [];
         this.snowPool = [];
-        // Create rain pool (thin lines)
-        const rainMat = new THREE.MeshBasicMaterial({color:0xaabbdd, transparent:true, opacity:0.4});
-        for (let i = 0; i < (isMobile ? 40 : 80); i++) {
-            const geo = new THREE.BoxGeometry(0.02, 0.8, 0.02);
+        // Create rain pool (thin fast streaks)
+        const rainMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.35});
+        for (let i = 0; i < (isMobile ? 50 : 100); i++) {
+            const geo = new THREE.CylinderGeometry(0.005, 0.005, 1.5, 3);
             const mesh = new THREE.Mesh(geo, rainMat);
+            mesh.rotation.x = 0.05; // Вперед легкий наклон
             mesh.visible = false;
-            this.rainPool.push({ mesh, vy: -25 - Math.random()*10, active: false });
+            this.rainPool.push({ mesh, vy: -30 - Math.random()*15, active: false });
             sc.add(mesh);
         }
         // Create snow pool (small spheres)
@@ -1495,21 +1659,7 @@ function makeBarrier() {
 }
 
 function makeRock(s=1) {
-    const isDesert = (typeof BIOMES !== 'undefined' && BIOMES[state.biomeIdx] && BIOMES[state.biomeIdx].env === 'canyon');
     const g = new THREE.Group();
-    if (isDesert) {
-        const geo = new THREE.DodecahedronGeometry(0.8*s, 0); 
-        const rockMat = M(0x100820); // Obsidian
-        const mesh = new THREE.Mesh(geo, rockMat);
-        mesh.position.y = 0.4*s;
-        mesh.scale.set(1, 2.5 + Math.random(), 1); 
-        g.add(mesh);
-        
-        const edgeGeo = new THREE.EdgesGeometry(geo);
-        const line = new THREE.LineSegments(edgeGeo, new THREE.LineBasicMaterial({color: 0xFF0055}));
-        mesh.add(line);
-        return g;
-    }
 
     const geo = new THREE.DodecahedronGeometry(0.7*s, 1);
     // Vertex displacement for irregular natural shape
@@ -1529,31 +1679,6 @@ function makeRock(s=1) {
 
 function makeCactus() {
     const g = new THREE.Group();
-    const isDesert = (typeof BIOMES !== 'undefined' && BIOMES[state.biomeIdx] && BIOMES[state.biomeIdx].env === 'canyon');
-    
-    if (isDesert) {
-        const cMat = M(0x110022); 
-        const emMat = ME(0x00E5FF, 1.5); // Cyan neon
-        // Main trunk
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.0, 0.4).translate(0,1.5,0), cMat));
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.1, 0.45).translate(0,1.5,0), emMat));
-        // Arms
-        const arm1 = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.3), cMat);
-        arm1.position.set(0.6, 1.2, 0);
-        g.add(arm1);
-        const arm1Up = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.0, 0.3), emMat);
-        arm1Up.position.set(1.05, 1.7, 0);
-        g.add(arm1Up);
-        
-        const arm2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 0.3), cMat);
-        arm2.position.set(-0.5, 2.0, 0);
-        g.add(arm2);
-        const arm2Up = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), ME(0xFF007F, 1.5)); // Magenta bloom
-        arm2Up.position.set(-0.85, 2.4, 0);
-        g.add(arm2Up);
-        return g;
-    }
-
     // Main trunk
     g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.22,3.0,6).translate(0,1.5,0), matCactus));
     // Arms at different angles
@@ -2937,7 +3062,7 @@ function updateFuelMode(dt, playerX) {
 
     // Game over — бензин кончился
     if (state.fuel <= 0) {
-        gameOver('БЕНЗИН КОНЧИЛСЯ!');
+        gameOver(t('fuelEmpty'));
     }
 }
 
@@ -2994,7 +3119,7 @@ function addCoinsToWallet(coins) {
 function startCrashAnimation(title) {
     state.crashing = true;
     state.crashTimer = 0;
-    state.crashTitle = title || 'АВАРИЯ';
+    state.crashTitle = title || t('crash');
     state.crashCarY = 0;
     state.crashCarRotX = 0;
     sfx.crash();
@@ -3033,7 +3158,7 @@ function startCrashAnimation(title) {
 
 function finishCrashAndShowResult() {
     const title = state.crashTitle;
-    const isCrash = (title === 'АВАРИЯ');
+    const isCrash = (title === t('crash'));
 
     // Check second life for crash only (not police/fuel/duel)
     if (isCrash && !state.usedSecondLife) {
@@ -3055,11 +3180,11 @@ function showGameOverScreen(title) {
     const isRec=state.score>best;
     if(isRec) localStorage.setItem('rr3d_best',state.score);
     addCoinsToWallet(state.coins);
-    ui.goTitle.textContent = title || 'АВАРИЯ';
+    ui.goTitle.textContent = title || t('crash');
     ui.goTitle.style.color = '#FF5252';
     ui.goScore.textContent=state.score;
-    ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}  |  Локации: ${Math.min(state.biomeIdx+1,BIOMES.length)}`;
-    ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+    ui.goStats.textContent=t('stats')(state.coins, state.dodged, Math.min(state.biomeIdx+1,BIOMES.length));
+    ui.goRecord.innerHTML=isRec?`<div class="new-record">${t('newRecord')}</div>`:`<div class="record">${t('record')}: ${best}</div>`;
     if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
     onGameEnd();
     ui.gameover.style.display='flex';
@@ -3067,7 +3192,7 @@ function showGameOverScreen(title) {
 
 function gameOver(title) {
     // For crash: start crash animation; for non-crash deaths: also start animation but shorter
-    const isCrash = (title === 'АВАРИЯ');
+    const isCrash = (title === t('crash'));
     if (isCrash) {
         startCrashAnimation(title);
     } else {
@@ -3081,11 +3206,11 @@ function gameOver(title) {
         const isRec=state.score>best;
         if(isRec) localStorage.setItem('rr3d_best',state.score);
         addCoinsToWallet(state.coins);
-        ui.goTitle.textContent = title || 'АВАРИЯ';
+        ui.goTitle.textContent = title || t('crash');
         ui.goTitle.style.color = '#FF5252';
         ui.goScore.textContent=state.score;
-        ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}  |  Локации: ${Math.min(state.biomeIdx+1,BIOMES.length)}`;
-        ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+        ui.goStats.textContent=t('stats')(state.coins, state.dodged, Math.min(state.biomeIdx+1,BIOMES.length));
+        ui.goRecord.innerHTML=isRec?`<div class="new-record">${t('newRecord')}</div>`:`<div class="record">${t('record')}: ${best}</div>`;
         if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
         onGameEnd();
         ui.gameover.style.display='flex';
@@ -3105,18 +3230,18 @@ function gameWin(title) {
         const streakMult = Math.min(3, 1 + streak * 0.2);
         const bonusCoins = Math.floor(state.coins * (streakMult - 1));
         state.coins += bonusCoins;
-        title = title + ` \uD83D\uDD25 Серия: ${streak} побед! Монеты x${streakMult.toFixed(1)}`;
+        title = title + ` \uD83D\uDD25 ${t('streak')(streak, streakMult.toFixed(1))}`;
     }
     checkMissions(state);
     addCoinsToWallet(state.coins);
     ui.goTitle.textContent = title;
     ui.goTitle.style.color = '#76FF03';
     ui.goScore.textContent = state.score;
-    ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}`;
+    ui.goStats.textContent=t('statsShort')(state.coins, state.dodged);
     const best=parseInt(localStorage.getItem('rr3d_best')||'0');
     const isRec=state.score>best;
     if(isRec) localStorage.setItem('rr3d_best',state.score);
-    ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+    ui.goRecord.innerHTML=isRec?`<div class="new-record">${t('newRecord')}</div>`:`<div class="record">${t('record')}: ${best}</div>`;
     if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
     onGameEnd();
     ui.gameover.style.display='flex';
@@ -3135,7 +3260,7 @@ function gameLose(title) {
     ui.goTitle.textContent = title;
     ui.goTitle.style.color = '#FF5252';
     ui.goScore.textContent = state.score;
-    ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}`;
+    ui.goStats.textContent=t('statsShort')(state.coins, state.dodged);
     ui.goRecord.innerHTML = '';
     if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
     onGameEnd();
@@ -3384,7 +3509,7 @@ function updatePoliceChase(dt, moveZ, playerX) {
         const policeXNow = LANE_X[0]+(LANE_X[2]-LANE_X[0])*(state.policeLaneSmooth/2);
         const catchDx = Math.abs(playerX - policeXNow);
         if (catchDx < 3.5) {
-            gameOver('ЗАДЕРЖАН!');
+            gameOver(t('arrested'));
         }
     }
 }
@@ -3794,7 +3919,7 @@ function loop() {
             if(o.mesh.position.z<state.dist-25){scene.remove(o.mesh);state.obstacles.splice(i,1);continue;}
             const dx=Math.abs(playerX-o.mesh.position.x);
             const dz=Math.abs(state.dist-o.mesh.position.z);
-            if(dx<2.0 && dz<3.0 && !state.invincible){gameOver('АВАРИЯ');return;}
+            if(dx<2.0 && dz<3.0 && !state.invincible){gameOver(t('crash'));return;}
             // Near miss
             if(!o.passed && o.mesh.position.z<state.dist-3.5) {
                 o.passed=true;
@@ -4197,7 +4322,69 @@ playerCar.position.set(0,0,0);
 camera.position.set(0,4,-8);
 camera.lookAt(0,1,10);
 
+function applyTranslations() {
+    // HUD
+    const scoreLabel = document.querySelector('.hud-score .label');
+    const coinsLabel = document.querySelector('.hud-coins .label');
+    if (scoreLabel) scoreLabel.textContent = t('score');
+    if (coinsLabel) coinsLabel.textContent = t('coins');
+    // Menu mode buttons
+    const modeMap = {endless:'endless',chase:'chase',duel:'duel',fuel:'fuel'};
+    const descMap = {endless:'endlessDesc',chase:'chaseDesc',duel:'duelDesc',fuel:'fuelDesc'};
+    for (const [id, key] of Object.entries(modeMap)) {
+        const btn = document.getElementById('btn-'+id);
+        if (btn) {
+            const title = btn.querySelector('.mode-title');
+            const desc = btn.querySelector('.mode-desc');
+            if (title) title.textContent = t(key);
+            if (desc) desc.textContent = t(descMap[id]);
+        }
+    }
+    // Buttons
+    const garageBtn = document.getElementById('btn-garage');
+    if (garageBtn) garageBtn.innerHTML = '&#128295; ' + t('garage');
+    const missTitle = document.querySelector('.missions-title');
+    if (missTitle) missTitle.innerHTML = '&#128203; ' + t('dailyMissions');
+    const ctrlHint = document.querySelector('.controls-hint');
+    if (ctrlHint) ctrlHint.textContent = t('controlsHint');
+    const restartBtn = document.getElementById('btn-restart');
+    if (restartBtn) restartBtn.textContent = t('restart');
+    const backMenuBtn = document.getElementById('btn-back-menu');
+    if (backMenuBtn) backMenuBtn.textContent = t('menu');
+    const resumeBtn = document.getElementById('btn-resume');
+    if (resumeBtn) resumeBtn.textContent = '▶ ' + t('resume');
+    const pauseMenuBtn = document.getElementById('btn-pause-menu');
+    if (pauseMenuBtn) pauseMenuBtn.textContent = t('menu');
+    const dblCoins = document.getElementById('btn-double-coins');
+    if (dblCoins) dblCoins.textContent = t('doubleCoins');
+    // Second life
+    const slTitle = document.querySelector('#second-life .go-title');
+    if (slTitle) slTitle.textContent = t('secondLifeTitle');
+    const slAsk = document.querySelector('#second-life .sl-question');
+    if (slAsk) slAsk.textContent = t('secondLifeAsk');
+    const contBtn = document.getElementById('btn-continue');
+    if (contBtn) contBtn.textContent = '▶ ' + t('secondLifeYes');
+    const noContBtn = document.getElementById('btn-no-continue');
+    if (noContBtn) noContBtn.textContent = t('secondLifeNo');
+    // Garage
+    const garageTitle = document.querySelector('.garage-title');
+    if (garageTitle) garageTitle.textContent = t('garageTitle');
+    const garageBack = document.getElementById('btn-garage-back');
+    if (garageBack) garageBack.textContent = t('back');
+    // Fuel
+    const fuelLabel = document.getElementById('fuel-label');
+    if (fuelLabel) fuelLabel.textContent = t('fuelLabel');
+    const fuelWarn = document.getElementById('fuel-warning');
+    if (fuelWarn) fuelWarn.textContent = t('fuelLow');
+    // Pause title
+    const pauseTitle = document.querySelector('#pause .go-title');
+    if (pauseTitle) pauseTitle.textContent = '⏸ ' + t('pause');
+
+    renderMissions();
+}
+
 initYandexSDK().then(() => {
     if (ysdk) try { ysdk.features.LoadingAPI.ready(); } catch(e) {}
+    applyTranslations();
     loop();
-}).catch(() => loop());
+}).catch(() => { applyTranslations(); loop(); });
