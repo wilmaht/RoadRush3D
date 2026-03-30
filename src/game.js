@@ -1205,14 +1205,14 @@ const BODY_BUILDERS = {
     police2: buildPoliceCar2,
 };
 
-const BODY_PREVIEW_COLORS = {
-    sedan: '#1565C0',
-    pickup: '#8D6E63',
-    sports: '#E53935',
-    suv: '#546E7A',
-    ambulance: '#EEEEEE',
-    firetruck: '#CC0000',
-    police2: '#EEEEEE',
+const BODY_ICONS = {
+    sedan: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 20 L 25 20 L 40 5 C 43 2 48 2 52 2 L 68 2 C 73 2 78 5 82 10 L 92 20 C 95 20 98 22 95 28 L 88 28" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 74 28 A 7 7 0 0 1 88 28" /><path d="M 12 28 L 8 28 C 5 28 5 22 8 20" /><circle cx="19" cy="28" r="3" /><circle cx="81" cy="28" r="3" /><path d="M 40 5 L 40 20 M 66 2 L 66 20" stroke-width="2" /></svg>',
+    pickup: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 18 L 40 18 L 40 4 C 43 2 48 2 52 2 L 68 2 C 73 2 76 4 80 10 L 92 20 C 95 20 98 22 95 28 L 88 28" /><path d="M 12 28 L 8 28 C 5 28 5 20 8 18" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 74 28 A 7 7 0 0 1 88 28" /><circle cx="19" cy="28" r="3" /><circle cx="81" cy="28" r="3" /><path d="M 68 2 L 68 20" stroke-width="2"/></svg>',
+    sports: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 20 L 25 20 L 42 10 C 45 8 50 8 55 8 L 70 8 C 76 8 82 12 85 16 L 95 22 C 98 24 99 26 95 28 L 88 28" /><path d="M 12 28 L 8 28 C 3 28 3 22 8 20 M 8 20 L 2 16" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 74 28 A 7 7 0 0 1 88 28" /><circle cx="19" cy="28" r="3.5" /><circle cx="81" cy="28" r="3.5" /><path d="M 42 10 L 42 22 M 68 8 L 68 20" stroke-width="2"/></svg>',
+    suv: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 16 L 20 16 L 25 4 C 27 2 30 2 35 2 L 75 2 C 80 2 85 5 88 10 L 96 20 C 98 22 99 26 96 28 L 90 28" /><path d="M 12 28 L 8 28 C 4 28 4 18 8 16" /><path d="M 12 28 A 8 8 0 0 1 28 28 L 74 28 A 8 8 0 0 1 90 28" /><circle cx="20" cy="28" r="4" /><circle cx="82" cy="28" r="4" /><path d="M 45 2 L 45 28 M 75 2 L 75 20 M 25 4 L 25 20" stroke-width="2"/></svg>',
+    ambulance: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 5 L 60 5 L 80 15 C 85 18 90 20 95 22 C 98 24 98 26 95 28 L 88 28" /><path d="M 12 28 L 8 28 C 4 28 4 6 8 5" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 74 28 A 7 7 0 0 1 88 28" /><circle cx="19" cy="28" r="3" /><circle cx="81" cy="28" r="3" /><path d="M 60 5 L 60 28 M 74 12 L 74 22" stroke-width="2" /><path d="M 30 16 L 40 16 M 35 11 L 35 21" stroke-width="3" stroke="#FF5252" /></svg>',
+    firetruck: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round" overflow="visible"><path d="M 5 6 L 90 6 L 90 20 C 95 22 95 26 92 28 L 88 28" /><path d="M 12 28 L 5 28 L 5 6" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 40 28 A 7 7 0 0 1 54 28 L 74 28 A 7 7 0 0 1 88 28" /><circle cx="19" cy="28" r="3" /><circle cx="47" cy="28" r="3" /><circle cx="81" cy="28" r="3" /><path d="M 65 6 L 65 28" stroke-width="2"/><path d="M 10 0 L 80 0 M 20 -3 L 20 3 M 35 -3 L 35 3 M 50 -3 L 50 3 M 65 -3 L 65 3" stroke-width="2" /></svg>',
+    police2: '<svg viewBox="0 0 100 40" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M 8 20 L 25 20 L 40 5 C 43 2 48 2 52 2 L 68 2 C 73 2 78 5 82 10 L 92 20 C 95 20 98 22 95 28 L 88 28" /><path d="M 12 28 L 8 28 C 5 28 5 22 8 20" /><path d="M 12 28 A 7 7 0 0 1 26 28 L 74 28 A 7 7 0 0 1 88 28" /><circle cx="19" cy="28" r="3" /><circle cx="81" cy="28" r="3" /><path d="M 40 5 L 40 20 M 66 2 L 66 20" stroke-width="2" /><path d="M 50 2 L 50 -2 L 56 -2 L 56 2" fill="none" stroke="#29B6F6" stroke-width="2"/><path d="M 56 2 L 56 -2 L 62 -2 L 62 2" fill="none" stroke="#FF5252" stroke-width="2"/></svg>',
 };
 
 function buildPlayerCar() {
@@ -3098,11 +3098,11 @@ function updateFuelMode(dt, playerX) {
     }
 
     // Обновление канистр
-    const t = Date.now() * 0.001;
+    const nowSec = Date.now() * 0.001;
     for (let i = state.fuelCanisters.length - 1; i >= 0; i--) {
         const c = state.fuelCanisters[i];
         c.mesh.rotation.y += dt * 3;
-        c.mesh.position.y = 0.6 + Math.sin(t * 3 + c.z * 0.1) * 0.15;
+        c.mesh.position.y = 0.6 + Math.sin(nowSec * 3 + c.z * 0.1) * 0.15;
         const ring = c.mesh.getObjectByName('fuelRing');
         if (ring) { ring.rotation.x = t * 2; ring.rotation.z = t; }
 
@@ -4143,11 +4143,11 @@ function loop() {
         }
 
         // Coins
-        const t = Date.now() * 0.001;
+        const nowSec = Date.now() * 0.001;
         for (let i=state.coinObjs.length-1; i>=0; i--) {
             const c=state.coinObjs[i];
             c.mesh.rotation.y+=dt*5;
-            c.mesh.position.y=1.3+Math.sin(t*3+c.z*0.1)*0.3;
+            c.mesh.position.y=1.3+Math.sin(nowSec*3+c.z*0.1)*0.3;
             const ring = c.mesh.getObjectByName('coinRing');
             if (ring) {
                 ring.rotation.x = t*2;
@@ -4293,8 +4293,10 @@ function renderGarage() {
         const selected = garage.selectedBody === bd.id;
         const card = document.createElement('div');
         card.className = 'body-card' + (selected ? ' selected' : owned ? ' owned' : '');
-        const previewColor = BODY_PREVIEW_COLORS[bd.id] || '#888';
-        card.innerHTML = '<div class="car-preview" style="background:' + previewColor + '"></div>' +
+        const iconSvg = BODY_ICONS[bd.id] || '';
+        const bodyColor = '#' + (bd.color || 0x1565C0).toString(16).padStart(6, '0');
+        
+        card.innerHTML = '<div class="car-preview-svg" style="color: ' + bodyColor + '; width: 70px; height: 35px; margin: 0 auto 8px; display:flex; justify-content:center; align-items:center;">' + iconSvg + '</div>' +
             '<div class="car-name">' + bd.name + '</div>' +
             '<div class="car-price">' + (owned ? '\u2713' : '\uD83E\uDE99 ' + bd.price) + '</div>' +
             (owned && !selected ? '<div class="car-action">ВЫБРАТЬ</div>' : '') +
