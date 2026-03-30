@@ -3,6 +3,88 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 // ======================== MOBILE DETECTION ========================
 const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
 
+// ======================== YANDEX SDK ========================
+let ysdk = null;
+let yPlayer = null;
+let gameOverCount = 0;
+let lastAdTime = 0;
+const AD_COOLDOWN = 60000;
+const AD_EVERY_N = 2;
+
+async function initYandexSDK() {
+    try {
+        ysdk = await YaGames.init();
+        try { yPlayer = await ysdk.getPlayer({ scopes: false }); } catch(e) {}
+        await loadCloudSaves();
+    } catch(e) {
+        console.warn('Yandex SDK not available');
+    }
+}
+
+async function showInterstitialAd() {
+    if (!ysdk || Date.now() - lastAdTime < AD_COOLDOWN) return;
+    sfx.mute();
+    try {
+        await ysdk.adv.showFullscreenAdv({
+            callbacks: {
+                onClose() { sfx.unmute(); lastAdTime = Date.now(); },
+                onError() { sfx.unmute(); }
+            }
+        });
+    } catch(e) { sfx.unmute(); }
+}
+
+function showRewardedAd(onRewarded) {
+    if (!ysdk) { onRewarded(); return; }
+    sfx.mute();
+    ysdk.adv.showRewardedVideo({
+        callbacks: {
+            onRewarded() { sfx.unmute(); onRewarded(); },
+            onClose() { sfx.unmute(); },
+            onError() { sfx.unmute(); }
+        }
+    });
+}
+
+async function saveToCloud() {
+    if (!yPlayer) return;
+    try {
+        await yPlayer.setData({
+            wallet: garage.wallet,
+            ownedBodies: garage.ownedBodies,
+            selectedBody: garage.selectedBody,
+            ownedColors: garage.ownedColors,
+            selectedColor: garage.selectedColor,
+            upgrades: garage.upgrades,
+            best: parseInt(localStorage.getItem('rr3d_best') || '0'),
+            duelStreak: parseInt(localStorage.getItem('rr3d_duel_streak') || '0'),
+        }, true);
+    } catch(e) {}
+}
+
+async function loadCloudSaves() {
+    if (!yPlayer) return;
+    try {
+        const d = await yPlayer.getData();
+        if (!d || Object.keys(d).length === 0) return;
+        if (d.wallet !== undefined && d.wallet > garage.wallet) garage.wallet = d.wallet;
+        if (d.ownedBodies) d.ownedBodies.forEach(b => { if (!garage.ownedBodies.includes(b)) garage.ownedBodies.push(b); });
+        if (d.selectedBody) garage.selectedBody = d.selectedBody;
+        if (d.ownedColors) d.ownedColors.forEach(c => { if (!garage.ownedColors.includes(c)) garage.ownedColors.push(c); });
+        if (d.selectedColor !== undefined) garage.selectedColor = d.selectedColor;
+        if (d.upgrades) { for (const k in d.upgrades) { if (!garage.upgrades[k] || d.upgrades[k] > garage.upgrades[k]) garage.upgrades[k] = d.upgrades[k]; } }
+        if (d.best) { const lb = parseInt(localStorage.getItem('rr3d_best')||'0'); if (d.best > lb) localStorage.setItem('rr3d_best', d.best); }
+        if (d.duelStreak !== undefined) { const ls = parseInt(localStorage.getItem('rr3d_duel_streak')||'0'); if (d.duelStreak > ls) localStorage.setItem('rr3d_duel_streak', d.duelStreak); }
+        saveGarage();
+    } catch(e) {}
+}
+
+function onGameEnd() {
+    gameOverCount++;
+    if (gameOverCount % AD_EVERY_N === 0) showInterstitialAd();
+    saveToCloud();
+}
+
 // ======================== AUDIO ========================
 class GameAudio {
     constructor() {
@@ -2032,6 +2114,7 @@ const ui = {
     goScore: document.getElementById('go-score'),
     goStats: document.getElementById('go-stats'),
     goRecord: document.getElementById('go-record-label'),
+    doubleCoinsBtn: document.getElementById('btn-double-coins'),
     menuRecord: document.getElementById('menu-record'),
     speedOverlay: document.getElementById('speed-overlay'),
     chaseUI: document.getElementById('chase-ui'),
@@ -2977,6 +3060,8 @@ function showGameOverScreen(title) {
     ui.goScore.textContent=state.score;
     ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}  |  Локации: ${Math.min(state.biomeIdx+1,BIOMES.length)}`;
     ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+    if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
+    onGameEnd();
     ui.gameover.style.display='flex';
 }
 
@@ -3001,6 +3086,8 @@ function gameOver(title) {
         ui.goScore.textContent=state.score;
         ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}  |  Локации: ${Math.min(state.biomeIdx+1,BIOMES.length)}`;
         ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+        if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
+        onGameEnd();
         ui.gameover.style.display='flex';
     }
 }
@@ -3030,6 +3117,8 @@ function gameWin(title) {
     const isRec=state.score>best;
     if(isRec) localStorage.setItem('rr3d_best',state.score);
     ui.goRecord.innerHTML=isRec?'<div class="new-record">НОВЫЙ РЕКОРД!</div>':`<div class="record">Рекорд: ${best}</div>`;
+    if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
+    onGameEnd();
     ui.gameover.style.display='flex';
 }
 
@@ -3048,6 +3137,8 @@ function gameLose(title) {
     ui.goScore.textContent = state.score;
     ui.goStats.textContent=`Монеты: ${state.coins}  |  Обгоны: ${state.dodged}`;
     ui.goRecord.innerHTML = '';
+    if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = (ysdk && state.coins > 0) ? 'block' : 'none';
+    onGameEnd();
     ui.gameover.style.display='flex';
 }
 
@@ -4019,8 +4110,7 @@ document.getElementById('btn-garage').onclick = () => showGarage();
 document.getElementById('btn-garage-back').onclick = () => hideGarage();
 
 // Second life buttons
-document.getElementById('btn-continue').onclick = () => {
-    if (state.phase !== 'secondlife') return;
+function grantSecondLife() {
     state.usedSecondLife = true;
     state.phase = 'playing';
     state.invincible = true;
@@ -4030,13 +4120,16 @@ document.getElementById('btn-continue').onclick = () => {
     playerCar.rotation.x = 0;
     playerCar.position.y = 0;
     playerCar.visible = true;
-    // Clean remaining crash particles
     state.crashShards.forEach(s => { scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose(); });
     state.crashSmokes.forEach(s => { scene.remove(s.mesh); s.mesh.geometry.dispose(); s.mesh.material.dispose(); });
     state.crashShards = [];
     state.crashSmokes = [];
     if (ui.secondLife) ui.secondLife.style.display = 'none';
     sfx.startEngine();
+}
+document.getElementById('btn-continue').onclick = () => {
+    if (state.phase !== 'secondlife') return;
+    showRewardedAd(() => grantSecondLife());
 };
 document.getElementById('btn-no-continue').onclick = () => {
     if (state.phase !== 'secondlife') return;
@@ -4062,10 +4155,34 @@ ui.hudMuteBtn.onclick = () => {
     document.getElementById('mute-icon-on').style.display = muted ? 'none' : 'block';
     document.getElementById('mute-icon-off').style.display = muted ? 'block' : 'none';
 };
+// Double coins button
+document.getElementById('btn-double-coins').onclick = () => {
+    showRewardedAd(() => {
+        const bonus = state.coins;
+        garage.wallet += bonus;
+        saveGarage();
+        updateWalletDisplays();
+        ui.goStats.textContent += ` (+${bonus} x2!)`;
+        if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = 'none';
+    });
+};
+
 window.addEventListener('resize',()=>{
     camera.aspect=window.innerWidth/window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth,window.innerHeight);
+});
+
+// ======================== VISIBILITY CHANGE (Yandex requirement) ========================
+let wasMutedBeforeHide = false;
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        wasMutedBeforeHide = sfx.muted;
+        if (state.phase === 'playing') pauseGame();
+        sfx.mute();
+    } else {
+        if (!wasMutedBeforeHide) sfx.unmute();
+    }
 });
 
 // ======================== INIT ========================
@@ -4079,4 +4196,8 @@ applyBiomeInstant(BIOMES[0]);
 playerCar.position.set(0,0,0);
 camera.position.set(0,4,-8);
 camera.lookAt(0,1,10);
-loop();
+
+initYandexSDK().then(() => {
+    if (ysdk) try { ysdk.features.LoadingAPI.ready(); } catch(e) {}
+    loop();
+}).catch(() => loop());

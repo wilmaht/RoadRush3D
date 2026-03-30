@@ -405,6 +405,7 @@
         <div class="go-final-score" id="go-score">0</div>
         <div class="stats" id="go-stats"></div>
         <div id="go-record-label"></div>
+        <button class="btn btn-restart" id="btn-double-coins" style="display:none;background:linear-gradient(135deg,#FFD740,#FFA000);color:#000">УДВОИТЬ МОНЕТЫ x2</button>
         <button class="btn btn-restart" id="btn-restart">ЕЩЁ РАЗ</button>
         <button class="btn btn-menu" id="btn-back-menu">МЕНЮ</button>
     </div>
@@ -424,6 +425,7 @@
         <button class="btn btn-menu" id="btn-no-continue">&#10005; НЕТ</button>
     </div>
 
+    <script src="https://yandex.ru/games/sdk/v2"></script>
     <script>window.onerror=function(m,s,l,c,e){document.title='ERR';document.getElementById('menu').innerHTML='<pre style="color:red;font-size:14px;padding:20px;text-align:left">'+m+'\nLine: '+l+':'+c+'\n'+(e&&e.stack?e.stack:'')+'</pre>';}</script>
     <script type="module" src="src/game.js"></script>
 </body>
