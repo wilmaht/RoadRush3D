@@ -950,51 +950,79 @@ function buildPlayerCar() {
 
 function makeCoin3D() {
     const g = new THREE.Group();
-    const coinMat = new THREE.MeshStandardMaterial({color:0xFFD740,metalness:0.95,roughness:0.05,flatShading:true,emissive:0xFFA000,emissiveIntensity:0.5});
-    const disk = new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.08,14), coinMat);
-    g.add(disk);
-    const rimMat = new THREE.MeshStandardMaterial({color:0xFFAB00,metalness:0.9,roughness:0.1,flatShading:true,emissive:0xFF8F00,emissiveIntensity:0.3});
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.38,0.05,8,14), rimMat));
-    const ringMat = new THREE.MeshBasicMaterial({color:0xFFD740,transparent:true,opacity:0.2,side:THREE.DoubleSide});
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5,0.65,16), ringMat);
+    // Золотой высокотехнологичный артефакт (Токен)
+    const rimMat = ME(0xFFD740, 0.4);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.08, 4, 8), rimMat); // Восьмиугольник
+    g.add(rim);
+    // Outer floating border
+    const outerBorder = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.02, 3, 8), M(0xFFFFFF));
+    g.add(outerBorder);
+    // Inner glowing core
+    const coreMat = ME(0xFFE57F, 1.2);
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.25, 0), coreMat);
+    g.add(core);
+
+    const ringMat = new THREE.MeshBasicMaterial({color:0xFFE57F,transparent:true,opacity:0.3,side:THREE.DoubleSide});
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.65, 0.8, 8), ringMat);
     ring.name = 'coinRing'; g.add(ring);
-    if (!isMobile) { const pl = new THREE.PointLight(0xFFD740, 1, 8); pl.position.y = 0.3; g.add(pl); }
+
+    if (!isMobile) { const pl = new THREE.PointLight(0xFFD740, 1.5, 8); pl.position.y = 0.2; g.add(pl); }
     return g;
 }
 
 function makeFuelCanister() {
     const g = new THREE.Group();
-    // Канистра — зелёный цилиндр с ручкой
-    const bodyMat = ME(0x4CAF50, 0.6);
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.3,0.8,8), bodyMat));
-    // Крышка
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,0.15,6).translate(0,0.47,0), ME(0x2E7D32,0.4)));
-    // Ручка
-    const handleMat = M(0x333333);
-    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.12,0.03,6,8).translate(0,0.55,0), handleMat));
-    // Метка ⛽
-    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.15,0.15,0.02).translate(0,0,0.31), ME(0xFFFFFF,0.5)));
-    // Зелёное свечение
-    const glowMat = new THREE.MeshBasicMaterial({color:0x4CAF50,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.4,0.6,12), glowMat);
+    // Sci-Fi Бензобак со скошенными углами (CylinderGeometry(..4) = box)
+    const bodyGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.7, 4);
+    bodyGeo.rotateY(Math.PI/4);
+    const bodyMat = M(0x2E3B32); // Бронированный сплав
+    g.add(new THREE.Mesh(bodyGeo, bodyMat));
+    // Неоновое топливное ядро
+    const coreGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.3, 4);
+    coreGeo.rotateY(Math.PI/4);
+    g.add(new THREE.Mesh(coreGeo, ME(0x00E676, 1.5)));
+    // Скошенные накладки крышки и дна
+    const capMat = M(0x1B2620);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.1, 4).rotateY(Math.PI/4).translate(0,0.3,0), capMat));
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.37, 0.37, 0.1, 4).rotateY(Math.PI/4).translate(0,-0.3,0), capMat));
+    // Крепкая тактическая ручка
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.3, 0.4).translate(0, 0.45, 0), capMat));
+    // Светящееся кольцо-анимация
+    const ringMat = new THREE.MeshBasicMaterial({color:0x00E676,transparent:true,opacity:0.2,side:THREE.DoubleSide});
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 4).rotateZ(Math.PI/4), ringMat);
     ring.name = 'fuelRing'; g.add(ring);
-    if (!isMobile) g.add(new THREE.PointLight(0x4CAF50, 1.5, 10));
+
+    if (!isMobile) g.add(new THREE.PointLight(0x00E676, 2, 10));
     return g;
 }
 
 function makeSpeedBoost() {
     const g = new THREE.Group();
-    const bodyMat = ME(0x00B8D4, 1.0);
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.25,0.9,8), bodyMat));
-    g.add(new THREE.Mesh(new THREE.ConeGeometry(0.2,0.4,8).translate(0,0.65,0), ME(0x00E5FF,1.0)));
-    const flameMat = new THREE.MeshBasicMaterial({color:0x40C4FF,transparent:true,opacity:0.7});
-    g.add(new THREE.Mesh(new THREE.ConeGeometry(0.18,0.5,6).rotateX(Math.PI).translate(0,-0.7,0), flameMat));
-    const glowMat = new THREE.MeshBasicMaterial({color:0x00E5FF,transparent:true,opacity:0.15,side:THREE.DoubleSide});
-    const glow1 = new THREE.Mesh(new THREE.RingGeometry(0.4,0.7,12), glowMat);
+    // Баллон NOS (мрачный блестящий металл)
+    const baseMat = M(0x151A24);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.8, 8), baseMat));
+    // Купола сверху и снизу
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8).translate(0, 0.4, 0), baseMat));
+    g.add(new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8).translate(0, -0.4, 0), baseMat));
+    // Клапан
+    const valveMat = M(0xB0BEC5);
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 6).translate(0, 0.7, 0), valveMat));
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.03, 4, 8).translate(0, 0.78, 0).rotateX(Math.PI/2), valveMat));
+    // Неоновые кольца на баллоне (чистая закись азота)
+    const neonMat = ME(0x00E5FF, 2.0);
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.255, 0.04, 4, 8).translate(0, 0.1, 0), neonMat));
+    g.add(new THREE.Mesh(new THREE.TorusGeometry(0.255, 0.04, 4, 8).translate(0, -0.1, 0), neonMat));
+    // Выхлоп плазмы снизу баллона
+    g.add(new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.6, 6).rotateX(Math.PI).translate(0, -0.8, 0), new THREE.MeshBasicMaterial({color:0x40C4FF,transparent:true,opacity:0.8})));
+    // Внешние анимационные кольца
+    const glowMat = new THREE.MeshBasicMaterial({color:0x00E5FF,transparent:true,opacity:0.2,side:THREE.DoubleSide});
+    const glow1 = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.6, 8), glowMat);
     glow1.name = 'boostRing1'; g.add(glow1);
-    const glow2 = new THREE.Mesh(new THREE.RingGeometry(0.3,0.55,12), glowMat);
-    glow2.name = 'boostRing2'; glow2.position.y=0.3; g.add(glow2);
+    const glow2 = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.45, 8), glowMat);
+    glow2.name = 'boostRing2'; glow2.position.y=0.2; g.add(glow2);
+
     if (!isMobile) g.add(new THREE.PointLight(0x00E5FF, 2, 12));
+    g.rotation.x = Math.PI / 6; // Наклон ракеты
     return g;
 }
 
