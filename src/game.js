@@ -3142,7 +3142,7 @@ function updateFuelMode(dt, playerX) {
 let criminalCar = null;
 
 function updateCopMode(dt, moveZ, playerX) {
-    if (!criminalCar) return;
+    if (!criminalCar || state.phase !== 'playing') return;
 
     state.copTimer += dt;
 
@@ -3216,7 +3216,7 @@ function updateCopMode(dt, moveZ, playerX) {
 
     // Catch: player is close enough to criminal
     if (state.criminalZ >= -1 && state.criminalZ <= 6) {
-        const cdx = Math.abs(playerX - crimX);
+        const cdx = Math.abs(playerX - crimXSmooth);
         if (cdx < 2.5) {
             gameWin(t('caught'));
             return;
@@ -3231,6 +3231,7 @@ function updateCopMode(dt, moveZ, playerX) {
 
 // ======================== AMBULANCE / TAXI MODE ========================
 function updateTimerMode(dt) {
+    if (state.phase !== 'playing') return;
     state.missionTimer -= dt;
     state.missionDist += state.speed * 0.4 * dt;
 
@@ -3372,6 +3373,9 @@ function finishCrashAndShowResult() {
 function showGameOverScreen(title) {
     state.phase='gameover';
     state.crashing = false;
+    if (criminalCar) { scene.remove(criminalCar); criminalCar = null; }
+    ui.copUI.style.display = 'none';
+    ui.timerUI.style.display = 'none';
     ui.hudPauseBtn.style.display='none'; ui.hudMuteBtn.style.display='none';
     sfx.stopEngine(); sfx.stopSiren();
     checkMissions(state);
