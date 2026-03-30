@@ -2818,8 +2818,22 @@ function resetGame() {
     // Remove train
     removeTrain();
 
-    // Rebuild player car with garage selection
-    rebuildPlayerCar();
+    // Rebuild player car — special car for some modes
+    if (state.mode === 'cop') {
+        scene.remove(playerCar);
+        playerCar = buildPoliceCar2(0xEEEEEE, true);
+        scene.add(playerCar);
+    } else if (state.mode === 'ambulance') {
+        scene.remove(playerCar);
+        playerCar = buildAmbulance(0xEEEEEE, true);
+        scene.add(playerCar);
+    } else if (state.mode === 'taxi') {
+        scene.remove(playerCar);
+        playerCar = buildSedan(0xFFD740, true);
+        scene.add(playerCar);
+    } else {
+        rebuildPlayerCar();
+    }
     playerCar.position.set(LANE_X[1],0,0); playerCar.rotation.set(0,0,0);
     biomeTo = BIOMES[0]; biomeFrom = BIOMES[0]; biomeTransition = 0;
     applyBiomeInstant(BIOMES[0]); showBiome(BIOMES[0].name);
@@ -3114,50 +3128,76 @@ let criminalCar = null;
 function updateCopMode(dt, moveZ, playerX) {
     if (!criminalCar) return;
 
-    // Criminal AI: drives ahead, changes lanes randomly, tries to escape
     state.copTimer += dt;
-    state.criminalSpeed = Math.min(state.speed * 1.05, state.speed + 15); // slightly faster or matching
 
-    // Random lane changes
-    if (Math.random() < 0.8 * dt) {
-        const newLane = Math.floor(Math.random() * 3);
-        state.criminalLane = newLane;
+    // Criminal speed: slightly slower than player so player CAN catch up
+    // but not too slow — it's a chase
+    const baseSpeed = state.speed * 0.92;
+    state.criminalSpeed = Math.max(baseSpeed, 40);
+
+    // Random lane changes — more often to dodge traffic
+    if (Math.random() < 1.2 * dt) {
+        // Check if there's an obstacle in current lane, prefer dodging
+        let bestLane = Math.floor(Math.random() * 3);
+        // Simple: just pick a random different lane
+        if (bestLane === state.criminalLane) bestLane = (bestLane + 1) % 3;
+        state.criminalLane = bestLane;
     }
 
     // Smooth lane movement
-    state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 5 * dt;
-    const crimX = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[1] - LANE_X[0]);
+    const prevSmooth = state.criminalLaneSmooth;
+    state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 4 * dt;
+    const crimLaneIdx = Math.round(Math.max(0, Math.min(2, state.criminalLaneSmooth)));
+    const crimX = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[2] - LANE_X[0]) / 2;
 
-    // Criminal moves forward relative to player
+    // Lean/tilt when turning (like player does)
+    const laneDelta = state.criminalLaneSmooth - prevSmooth;
+    criminalCar.rotation.z = -laneDelta * 8; // lean into turn
+
+    // Criminal moves relative to player
     state.criminalZ += (state.criminalSpeed - state.speed) * 0.4 * dt;
+    // Clamp: criminal can't get behind player
+    if (state.criminalZ < 5) state.criminalZ += 2 * dt;
     const crimWorldZ = state.dist + state.criminalZ;
 
     criminalCar.position.set(crimX, 0, crimWorldZ);
     criminalCar.visible = true;
 
+    // Criminal dodges traffic obstacles
+    for (let i = 0; i < state.obstacles.length; i++) {
+        const obs = state.obstacles[i];
+        const odz = obs.mesh.position.z - crimWorldZ;
+        const odx = Math.abs(obs.mesh.position.x - crimX);
+        // If obstacle is close ahead and in same lane
+        if (odz > 0 && odz < 15 && odx < 2.0) {
+            // Dodge to another lane
+            if (state.criminalLane <= 1) state.criminalLane = 2;
+            else state.criminalLane = 0;
+            break;
+        }
+    }
+
     // UI: distance to criminal
     const gap = Math.abs(state.criminalZ);
     if (ui.copDist) ui.copDist.textContent = Math.floor(gap);
 
-    // Color warning based on distance
     if (ui.copUI) {
         if (gap < 10) ui.copUI.style.borderColor = '#76FF03';
         else if (gap < 30) ui.copUI.style.borderColor = '#FFD740';
         else ui.copUI.style.borderColor = '#FF1744';
     }
 
-    // Catch: player reaches criminal
-    if (state.criminalZ <= 4 && state.criminalZ >= -2) {
+    // Catch: player is close enough to criminal
+    if (state.criminalZ >= -1 && state.criminalZ <= 6) {
         const cdx = Math.abs(playerX - crimX);
-        if (cdx < 2.0) {
-            // Caught!
+        if (cdx < 2.5) {
             gameWin(t('caught'));
             return;
         }
     }
 
-    // Criminal escapes if too far ahead
-    if (state.criminalZ > 80) {
+    // Criminal escapes if too far ahead (100m)
+    if (state.criminalZ > 100) {
         gameLose(t('escaped'));
     }
 }
