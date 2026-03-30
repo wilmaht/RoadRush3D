@@ -2860,15 +2860,16 @@ function spawnE() {
 
     let xOff;
     switch(cat) {
-        case 'tree': xOff=ROAD_W/2+8+Math.random()*15; break;
-        case 'bush': xOff=ROAD_W/2+8+Math.random()*15; break;
-        case 'building': xOff=ROAD_W/2+10+Math.random()*8; break;
-        case 'fence': xOff=ROAD_W/2+5+Math.random()*3; break;
-        case 'barrier': xOff=ROAD_W/2+1+Math.random()*1; break;
-        case 'rock': xOff=ROAD_W/2+7+Math.random()*15; break;
-        case 'billboard': xOff=ROAD_W/2+12+Math.random()*5; break;
-        case 'sign': xOff=ROAD_W/2+5+Math.random()*3; break;
-        default: xOff=ROAD_W/2+8+Math.random()*15; break;
+        // Убираем хаотичный Math.random(), чтобы объекты выстраивались в идеальные ровные аллеи и линии!
+        case 'fence': xOff=ROAD_W/2+3.5; break;
+        case 'barrier': xOff=ROAD_W/2+1.5; break;
+        case 'bush': xOff=ROAD_W/2+5.0; break;
+        case 'sign': xOff=ROAD_W/2+5.5; break;
+        case 'rock': xOff=ROAD_W/2+7.5; break;
+        case 'tree': xOff=ROAD_W/2+9.0; break;
+        case 'building': xOff=ROAD_W/2+14.0; break;
+        case 'billboard': xOff=ROAD_W/2+16.0; break;
+        default: xOff=ROAD_W/2+10.0; break;
     }
     mesh.position.set(side*xOff,0,z);
     scene.add(mesh); state.envObjs.push({mesh:mesh,z:z});
