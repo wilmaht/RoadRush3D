@@ -1096,7 +1096,6 @@ function makeCityBlock() {
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bhBase, bd).translate(0, bhBase / 2, 0), wallMat));
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.4, 0.4, bd + 0.4).translate(0, bhBase + 0.2, 0), matCityLedge));
 
-        {
             // Верхние ярусы (Ступенчатые крыши как на референсе)
             if (Math.random() < 0.7) {
                 const bw2 = bw * (0.6 + Math.random() * 0.3);
@@ -1178,9 +1177,6 @@ function makeCityBlock() {
                 bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, bhBase * 0.6, sw).translate(bw / 2 + 0.05, bhBase * 0.5, 0), matGlass));
                 bg.add(new THREE.Mesh(new THREE.BoxGeometry(0.1, bhBase * 0.6, sw).translate(-bw / 2 - 0.05, bhBase * 0.5, 0), matGlass));
             }
-        } else {
-             bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw*0.8, 3, bd*0.8).translate(0, bhBase + 1.5, 0), matCityRoof));
-        }
 
         bg.position.z = zCursor + bd / 2;
         group.add(bg);
