@@ -174,7 +174,7 @@ saveGarage();
 // ======================== BIOMES ========================
 const BIOMES = [
     { name:'Шоссе', sky:0x4a90d9, fog:0x8ab8e8, ground:0x4CAF50, ambient:0x99aacc, dir:0xfff5e0, dirI:1.3, fogN:200, fogF:600, env:'highway' },
-    { name:'Город', sky:0x4DD0E1, fog:0xFF8A80, ground:0x4A148C, ambient:0x8899aa, dir:0xfff0dd, dirI:1.0, fogN:100, fogF:600, env:'city' },
+    { name:'Город', sky:0x4DD0E1, fog:0xFF8A80, ground:0x4A148C, ambient:0xffffff, dir:0xffffff, dirI:1.6, fogN:100, fogF:600, env:'city' },
     { name:'Каньон', sky:0xdd8844, fog:0xddaa77, ground:0xC49535, ambient:0xaa8866, dir:0xffddaa, dirI:1.5, fogN:200, fogF:600, env:'canyon' },
     { name:'Тоннель', sky:0x111118, fog:0x0a0a12, ground:0x333338, ambient:0x222233, dir:0x4466aa, dirI:0.2, fogN:40, fogF:150, env:'tunnel' },
     { name:'Ночь', sky:0x0a0a2e, fog:0x0a0a20, ground:0x151530, ambient:0x334466, dir:0x6688bb, dirI:0.5, fogN:100, fogF:400, env:'night' },
@@ -2599,6 +2599,7 @@ function applyBiomeInstant(b) {
     ambLight.color.set(b.ambient);
     dirLight.color.set(b.dir); dirLight.intensity = b.dirI;
     groundMat.color.set(b.ground);
+    roadMat.color.setHex(b.env === 'city' ? 0x2D1B42 : 0x3a3a3a);
     hemiLight.color.set(b.sky); hemiLight.groundColor.set(b.ground);
     renderer.toneMappingExposure = b.dirI > 0.5 ? 1.1 : 0.7;
     const isNight = b.dirI < 0.6;
@@ -2619,6 +2620,11 @@ function updateBiomeTransition(dt) {
     dirLight.color.copy(lerpColors(biomeFrom.dir, biomeTo.dir, t));
     dirLight.intensity = biomeFrom.dirI + (biomeTo.dirI - biomeFrom.dirI) * t;
     groundMat.color.copy(lerpColors(biomeFrom.ground, biomeTo.ground, t));
+    
+    const roadColorFrom = biomeFrom.env === 'city' ? 0x2D1B42 : 0x3a3a3a;
+    const roadColorTo = biomeTo.env === 'city' ? 0x2D1B42 : 0x3a3a3a;
+    roadMat.color.copy(lerpColors(roadColorFrom, roadColorTo, t));
+
     hemiLight.color.copy(lerpColors(biomeFrom.sky, biomeTo.sky, t));
     hemiLight.groundColor.copy(lerpColors(biomeFrom.ground, biomeTo.ground, t));
     renderer.toneMappingExposure = (biomeFrom.dirI > 0.5 ? 1.1 : 0.7) + ((biomeTo.dirI > 0.5 ? 1.1 : 0.7) - (biomeFrom.dirI > 0.5 ? 1.1 : 0.7)) * t;
@@ -2797,7 +2803,7 @@ function spawnE() {
 
     // City biome: buildings very close to road, always both sides
     if (b.env === 'city' && cat === 'building') {
-        const xOff = ROAD_W/2 + 2.5; // Сплошной ровный коридор
+        const xOff = ROAD_W/2 + 5.5; // Сдвигаем назад, чтобы машины не врезались в текстуры (5.5м от края)
         mesh.position.set(-xOff, 0, z);
         scene.add(mesh); state.envObjs.push({mesh:mesh, z:z});
         // Second building on opposite side
