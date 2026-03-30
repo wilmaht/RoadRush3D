@@ -3146,52 +3146,63 @@ function updateCopMode(dt, moveZ, playerX) {
 
     state.copTimer += dt;
 
-    // Criminal speed: slightly slower than player so player CAN catch up
-    // but not too slow — it's a chase
+    // Criminal speed: slightly slower than player
     const baseSpeed = state.speed * 0.92;
     state.criminalSpeed = Math.max(baseSpeed, 40);
 
-    // Random lane changes — more often to dodge traffic
-    if (Math.random() < 1.2 * dt) {
-        // Check if there's an obstacle in current lane, prefer dodging
-        let bestLane = Math.floor(Math.random() * 3);
-        // Simple: just pick a random different lane
-        if (bestLane === state.criminalLane) bestLane = (bestLane + 1) % 3;
-        state.criminalLane = bestLane;
-    }
-
-    // Smooth lane movement
-    const prevSmooth = state.criminalLaneSmooth;
-    state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 4 * dt;
-    const crimLaneIdx = Math.round(Math.max(0, Math.min(2, state.criminalLaneSmooth)));
-    const crimX = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[2] - LANE_X[0]) / 2;
-
-    // Lean/tilt when turning (like player does)
-    const laneDelta = state.criminalLaneSmooth - prevSmooth;
-    criminalCar.rotation.z = -laneDelta * 8; // lean into turn
-
-    // Criminal moves relative to player
-    state.criminalZ += (state.criminalSpeed - state.speed) * 0.4 * dt;
-    // Clamp: criminal can't get behind player
-    if (state.criminalZ < 5) state.criminalZ += 2 * dt;
+    // Criminal AI: only change lane to dodge obstacles ahead
     const crimWorldZ = state.dist + state.criminalZ;
+    const crimX = LANE_X[state.criminalLane];
+    let needDodge = false;
+    let dodgeLane = state.criminalLane;
 
-    criminalCar.position.set(crimX, 0, crimWorldZ);
-    criminalCar.visible = true;
-
-    // Criminal dodges traffic obstacles
     for (let i = 0; i < state.obstacles.length; i++) {
         const obs = state.obstacles[i];
         const odz = obs.mesh.position.z - crimWorldZ;
         const odx = Math.abs(obs.mesh.position.x - crimX);
-        // If obstacle is close ahead and in same lane
-        if (odz > 0 && odz < 15 && odx < 2.0) {
-            // Dodge to another lane
-            if (state.criminalLane <= 1) state.criminalLane = 2;
-            else state.criminalLane = 0;
+        if (odz > 3 && odz < 25 && odx < 2.5) {
+            needDodge = true;
+            // Pick the safest lane (check both neighbors)
+            const options = [0, 1, 2].filter(l => l !== state.criminalLane);
+            // Prefer the lane with no obstacles
+            let best = options[0];
+            let bestClear = 0;
+            for (const opt of options) {
+                const optX = LANE_X[opt];
+                let clear = 100;
+                for (let j = 0; j < state.obstacles.length; j++) {
+                    const o2 = state.obstacles[j];
+                    const dz2 = o2.mesh.position.z - crimWorldZ;
+                    const dx2 = Math.abs(o2.mesh.position.x - optX);
+                    if (dz2 > 0 && dz2 < 25 && dx2 < 2.5) {
+                        clear = Math.min(clear, dz2);
+                    }
+                }
+                if (clear > bestClear) { bestClear = clear; best = opt; }
+            }
+            dodgeLane = best;
             break;
         }
     }
+
+    if (needDodge) state.criminalLane = dodgeLane;
+
+    // Smooth lane movement (slower = more natural)
+    const prevSmooth = state.criminalLaneSmooth;
+    state.criminalLaneSmooth += (state.criminalLane - state.criminalLaneSmooth) * 3 * dt;
+    const crimXSmooth = LANE_X[0] + state.criminalLaneSmooth * (LANE_X[2] - LANE_X[0]) / 2;
+
+    // Gentle lean when turning
+    const laneDelta = state.criminalLaneSmooth - prevSmooth;
+    criminalCar.rotation.z = -laneDelta * 4;
+
+    // Criminal moves relative to player
+    state.criminalZ += (state.criminalSpeed - state.speed) * 0.4 * dt;
+    if (state.criminalZ < 5) state.criminalZ += 2 * dt;
+    const crimWorldZFinal = state.dist + state.criminalZ;
+
+    criminalCar.position.set(crimXSmooth, 0, crimWorldZFinal);
+    criminalCar.visible = true;
 
     // UI: distance to criminal
     const gap = Math.abs(state.criminalZ);
