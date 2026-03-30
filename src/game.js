@@ -174,7 +174,7 @@ saveGarage();
 // ======================== BIOMES ========================
 const BIOMES = [
     { name:'Шоссе', sky:0x4a90d9, fog:0x8ab8e8, ground:0x4CAF50, ambient:0x99aacc, dir:0xfff5e0, dirI:1.3, fogN:200, fogF:600, env:'highway' },
-    { name:'Город', sky:0x5577aa, fog:0x8899bb, ground:0x666666, ambient:0x8899aa, dir:0xfff0dd, dirI:1.0, fogN:150, fogF:500, env:'city' },
+    { name:'Город', sky:0x4DD0E1, fog:0xFF8A80, ground:0x4A148C, ambient:0x8899aa, dir:0xfff0dd, dirI:1.0, fogN:100, fogF:600, env:'city' },
     { name:'Каньон', sky:0xdd8844, fog:0xddaa77, ground:0xC49535, ambient:0xaa8866, dir:0xffddaa, dirI:1.5, fogN:200, fogF:600, env:'canyon' },
     { name:'Тоннель', sky:0x111118, fog:0x0a0a12, ground:0x333338, ambient:0x222233, dir:0x4466aa, dirI:0.2, fogN:40, fogF:150, env:'tunnel' },
     { name:'Ночь', sky:0x0a0a2e, fog:0x0a0a20, ground:0x151530, ambient:0x334466, dir:0x6688bb, dirI:0.5, fogN:100, fogF:400, env:'night' },
@@ -1045,12 +1045,13 @@ const cityAwningMats = AWNING_COLORS.map(c => M(c));
 
 const matCityLedge = M(0x283593);
 const matCityRoof = M(0x1A237E);
-const matGlass = new THREE.MeshStandardMaterial({color:0xB2EBF2, transparent:true, opacity:0.8, flatShading:true});
+const matGlass = M(0x1A237E); // Сплошное темное окно как в векторе
 const nightWinMats = [ME(0x00E5FF, 1.2), ME(0xFF4081, 1.2), ME(0xFFEA00, 1.2), ME(0x00E676, 1.2)];
 
 function makeCityBlock() {
     const group = new THREE.Group();
-    const buildingCount = isMobile ? (1 + Math.floor(Math.random() * 2)) : (2 + Math.floor(Math.random() * 2));
+    // Делаем стену ОЧЕНЬ длинной, чтобы избежать зазоров от спавнера
+    const buildingCount = isMobile ? (3 + Math.floor(Math.random() * 2)) : (10 + Math.floor(Math.random() * 4));
     let zCursor = 0;
     const isNight = typeof isNightBiome === 'function' && isNightBiome();
 
@@ -1155,7 +1156,7 @@ function makeCityBlock() {
 
         bg.position.z = zCursor + bd / 2;
         group.add(bg);
-        zCursor += bd + Math.random() * 0.5;
+        zCursor += bd; // ВАЖНО: без добавления зазора (сплошная стена)
     }
 
     const totalZ = zCursor;
@@ -2796,14 +2797,14 @@ function spawnE() {
 
     // City biome: buildings very close to road, always both sides
     if (b.env === 'city' && cat === 'building') {
-        const xOff = ROAD_W/2 + 3 + Math.random()*2;
+        const xOff = ROAD_W/2 + 2.5; // Сплошной ровный коридор
         mesh.position.set(-xOff, 0, z);
         scene.add(mesh); state.envObjs.push({mesh:mesh, z:z});
         // Second building on opposite side
         const result2 = spawnEnvObject('city');
         if (result2.cat === 'building') {
             const mesh2 = result2.mesh;
-            const z2 = z + (Math.random()-0.5)*5;
+            const z2 = z; // Строго симметрично, без случайных скачков!
             mesh2.position.set(xOff, 0, z2);
             scene.add(mesh2); state.envObjs.push({mesh:mesh2, z:z2});
         }
