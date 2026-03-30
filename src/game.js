@@ -2153,7 +2153,7 @@ const state = {
 };
 
 // ======================== RENDERER & SCENE ========================
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:'high-performance', preserveDrawingBuffer: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = !isMobile;
@@ -4519,6 +4519,33 @@ document.getElementById('btn-double-coins').onclick = () => {
         if (ui.doubleCoinsBtn) ui.doubleCoinsBtn.style.display = 'none';
     });
 };
+
+// ======================== HI-RES SCREENSHOT (F9) ========================
+function takeScreenshot() {
+    // Hide UI temporarily
+    const uiEl = document.getElementById('ui');
+    uiEl.style.display = 'none';
+
+    // Render at 3x resolution for crisp screenshot
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const scale = 3;
+    renderer.setSize(w * scale, h * scale);
+    renderer.setPixelRatio(1);
+    renderer.render(scene, camera);
+
+    // Export canvas as PNG
+    const link = document.createElement('a');
+    link.download = 'RoadRush3D_' + Date.now() + '.png';
+    link.href = renderer.domElement.toDataURL('image/png');
+    link.click();
+
+    // Restore
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    uiEl.style.display = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'F9') { e.preventDefault(); takeScreenshot(); } });
 
 window.addEventListener('resize',()=>{
     camera.aspect=window.innerWidth/window.innerHeight;
