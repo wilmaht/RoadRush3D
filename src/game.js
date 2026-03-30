@@ -4254,6 +4254,22 @@ function loop() {
         if (ui.speedOverlay) ui.speedOverlay.style.opacity=Math.max(0,(state.speed-60)/120);
         // Спидометр — стрелка
         updateSpeedometer(state.speed);
+
+        // Проблесковые маячки на машине игрока (коп/скорая)
+        if (state.mode === 'cop' || state.mode === 'ambulance') {
+            const flash = Math.floor(Date.now() / 200) % 2;
+            if (state.mode === 'cop') {
+                const r = playerCar.getObjectByName('policeRed');
+                const b = playerCar.getObjectByName('policeBlue');
+                if (r) r.material.emissiveIntensity = flash === 0 ? 2.5 : 0.2;
+                if (b) b.material.emissiveIntensity = flash === 1 ? 2.5 : 0.2;
+            } else {
+                const r = playerCar.getObjectByName('sirenRed');
+                const w = playerCar.getObjectByName('sirenWhite');
+                if (r) r.material.emissiveIntensity = flash === 0 ? 3.0 : 0.2;
+                if (w) w.material.emissiveIntensity = flash === 1 ? 2.5 : 0.2;
+            }
+        }
     }
 
     renderer.render(scene,camera);
