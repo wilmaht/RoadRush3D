@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 
+// ======================== MOBILE DETECTION ========================
+const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 768;
+
 // ======================== AUDIO ========================
 class GameAudio {
     constructor() {
@@ -288,7 +291,7 @@ class WeatherParticles {
         this.snowPool = [];
         // Create rain pool (thin lines)
         const rainMat = new THREE.MeshBasicMaterial({color:0xaabbdd, transparent:true, opacity:0.4});
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < (isMobile ? 20 : 80); i++) {
             const geo = new THREE.BoxGeometry(0.02, 0.8, 0.02);
             const mesh = new THREE.Mesh(geo, rainMat);
             mesh.visible = false;
@@ -297,7 +300,7 @@ class WeatherParticles {
         }
         // Create snow pool (small spheres)
         const snowMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.7});
-        for (let i = 0; i < 60; i++) {
+        for (let i = 0; i < (isMobile ? 15 : 60); i++) {
             const geo = new THREE.SphereGeometry(0.06, 4, 3);
             const mesh = new THREE.Mesh(geo, snowMat);
             mesh.visible = false;
@@ -501,11 +504,13 @@ function buildPoliceCar() {
     // Blue light (right)
     const blueLight = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 0.3), ME(0x0044ff, 1.5));
     blueLight.position.set(0.35, 1.45, 0); blueLight.name = 'policeBlue'; g.add(blueLight);
-    // Point lights for the lightbar
+    // Point lights for the lightbar (desktop only)
+    if (!isMobile) {
     const redPL = new THREE.PointLight(0xff0000, 2, 15);
     redPL.position.set(-0.35, 1.5, 0); redPL.name = 'policeRedPL'; g.add(redPL);
     const bluePL = new THREE.PointLight(0x0044ff, 2, 15);
     bluePL.position.set(0.35, 1.5, 0); bluePL.name = 'policeBluePL'; g.add(bluePL);
+    }
     // Wheels
     const wheelShape = (x,z) => {
         const wg = new THREE.Group();
@@ -953,8 +958,7 @@ function makeCoin3D() {
     const ringMat = new THREE.MeshBasicMaterial({color:0xFFD740,transparent:true,opacity:0.2,side:THREE.DoubleSide});
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.5,0.65,16), ringMat);
     ring.name = 'coinRing'; g.add(ring);
-    const pl = new THREE.PointLight(0xFFD740, 1, 8);
-    pl.position.y = 0.3; g.add(pl);
+    if (!isMobile) { const pl = new THREE.PointLight(0xFFD740, 1, 8); pl.position.y = 0.3; g.add(pl); }
     return g;
 }
 
@@ -974,7 +978,7 @@ function makeFuelCanister() {
     const glowMat = new THREE.MeshBasicMaterial({color:0x4CAF50,transparent:true,opacity:0.15,side:THREE.DoubleSide});
     const ring = new THREE.Mesh(new THREE.RingGeometry(0.4,0.6,12), glowMat);
     ring.name = 'fuelRing'; g.add(ring);
-    g.add(new THREE.PointLight(0x4CAF50, 1.5, 10));
+    if (!isMobile) g.add(new THREE.PointLight(0x4CAF50, 1.5, 10));
     return g;
 }
 
@@ -990,7 +994,7 @@ function makeSpeedBoost() {
     glow1.name = 'boostRing1'; g.add(glow1);
     const glow2 = new THREE.Mesh(new THREE.RingGeometry(0.3,0.55,12), glowMat);
     glow2.name = 'boostRing2'; glow2.position.y=0.3; g.add(glow2);
-    g.add(new THREE.PointLight(0x00E5FF, 2, 12));
+    if (!isMobile) g.add(new THREE.PointLight(0x00E5FF, 2, 12));
     return g;
 }
 
@@ -1045,7 +1049,7 @@ const matCityStorefront = new THREE.MeshStandardMaterial({color:0xAADDFF, transp
 
 function makeCityBlock() {
     const group = new THREE.Group();
-    const buildingCount = 3 + Math.floor(Math.random() * 2);
+    const buildingCount = isMobile ? (1 + Math.floor(Math.random() * 2)) : (3 + Math.floor(Math.random() * 2));
     let zCursor = 0;
 
     for (let b = 0; b < buildingCount; b++) {
@@ -1060,6 +1064,10 @@ function makeCityBlock() {
         // Основные стены
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd).translate(0, bh / 2, 0), wallMat));
 
+        if (isMobile) {
+            // Mobile: simple box only, no details
+            bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.5, 0.3, bd + 0.5).translate(0, bh + 0.15, 0), matCityRoof));
+        } else {
         // Тёмный первый этаж
         const baseH = 3.5;
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.04, baseH, bd + 0.04).translate(0, baseH / 2, 0), darkMat));
@@ -1124,6 +1132,7 @@ function makeCityBlock() {
         if (Math.random() < 0.4) {
             bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw * 0.3, 1.0, bd * 0.3).translate(0, bh + 0.8, 0), matCityRoof));
         }
+        } // end !isMobile
 
         bg.position.z = zCursor + bd / 2;
         group.add(bg);
@@ -1565,7 +1574,7 @@ function makeLamp(on=false){
     g.add(new THREE.Mesh(new THREE.BoxGeometry(1.5,0.06,0.06).translate(0.75,4.9,0),M(0x666666)));
     if(on){
         g.add(new THREE.Mesh(new THREE.SphereGeometry(0.18,6,4).translate(1.4,4.85,0),ME(0xFFDD88,1.0)));
-        const pl=new THREE.PointLight(0xFFDD88,2,12);pl.position.set(1.4,4.7,0);g.add(pl);
+        if(!isMobile){const pl=new THREE.PointLight(0xFFDD88,2,12);pl.position.set(1.4,4.7,0);g.add(pl);}
         const cone=new THREE.Mesh(new THREE.CylinderGeometry(0.05,1.5,4.5,8,1,true),
             new THREE.MeshBasicMaterial({color:0xFFDD88,transparent:true,opacity:0.04,side:THREE.DoubleSide}));
         cone.position.set(1.4,2.4,0); g.add(cone);
@@ -1740,6 +1749,7 @@ const LAMP_OFFSET_X = 12/2 + 1.5;
 class Particles {
     constructor(sc) { this.scene = sc; this.sparks = []; }
     burst(pos, count=15, color=0xFF6D00) {
+        if (isMobile) count = Math.min(count, 5);
         for (let i=0; i<count; i++) {
             const geo = new THREE.BoxGeometry(0.08,0.08,0.08);
             const mat = new THREE.MeshBasicMaterial({color: [0xFF6D00,0xFF3D00,0xFFAB00,0xFFFFFF,0xFF1744][Math.floor(Math.random()*5)]});
@@ -1825,10 +1835,10 @@ const state = {
 };
 
 // ======================== RENDERER & SCENE ========================
-const renderer = new THREE.WebGLRenderer({ antialias:true, powerPreference:'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference:'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.shadowMap.enabled = true;
+renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = !isMobile;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.1;
@@ -1841,8 +1851,8 @@ const ambLight = new THREE.AmbientLight(0x99aacc, 0.5);
 scene.add(ambLight);
 const dirLight = new THREE.DirectionalLight(0xfff5e0, 1.3);
 dirLight.position.set(8,20,15);
-dirLight.castShadow = true;
-dirLight.shadow.mapSize.set(2048, 2048);
+dirLight.castShadow = !isMobile;
+dirLight.shadow.mapSize.set(isMobile ? 512 : 2048, isMobile ? 512 : 2048);
 dirLight.shadow.camera.left=-25; dirLight.shadow.camera.right=25;
 dirLight.shadow.camera.top=30; dirLight.shadow.camera.bottom=-15;
 dirLight.shadow.camera.near=1; dirLight.shadow.camera.far=60;
@@ -1999,7 +2009,8 @@ window.addEventListener('keydown', e => {
     }
     if (e.code === 'KeyM') {
         const muted = sfx.toggleMute();
-        ui.hudMuteBtn.textContent = muted ? '🔇' : '🔊';
+        document.getElementById('mute-icon-on').style.display = muted ? 'none' : 'block';
+        document.getElementById('mute-icon-off').style.display = muted ? 'block' : 'none';
     }
 });
 window.addEventListener('keyup', e => { keys[e.code]=false; });
@@ -2156,6 +2167,7 @@ function cleanupRoadSigns() {
 
 // ======================== NOS FLAME ========================
 function spawnNosFlame(carPos) {
+    if (isMobile) return;
     for (let i = 0; i < 2; i++) {
         const size = 0.04 + Math.random() * 0.06;
         const geo = new THREE.SphereGeometry(size, 3, 2);
@@ -2350,6 +2362,7 @@ function removeTrain() {
 }
 
 function updateTrain(dt) {
+    if (isMobile) return;
     const currentBiome = BIOMES[state.biomeIdx];
     const isDesert = currentBiome.env === 'canyon';
 
@@ -2495,7 +2508,8 @@ function resetGame() {
     // Rebuild player car with garage selection
     rebuildPlayerCar();
     playerCar.position.set(LANE_X[1],0,0); playerCar.rotation.set(0,0,0);
-    applyBiome(BIOMES[0]); showBiome(BIOMES[0].name);
+    biomeTo = BIOMES[0]; biomeFrom = BIOMES[0]; biomeTransition = 0;
+    applyBiomeInstant(BIOMES[0]); showBiome(BIOMES[0].name);
     headL.intensity=0; headR.intensity=0;
 
     // Cleanup fuel canisters
@@ -2534,23 +2548,74 @@ let baseFogNear = 60, baseFogFar = 200;
 let baseGroundColor = 0x4CAF50;
 let baseRoadMetalness = 0.0;
 
+// Плавный переход между биомами
+let biomeTransition = 0; // 0 = переход завершён, >0 = идёт переход
+let biomeTransDuration = 4.0; // секунды на переход
+let biomeFrom = null; // предыдущий биом
+let biomeTo = null; // целевой биом
+const _colA = new THREE.Color();
+const _colB = new THREE.Color();
+const _colMix = new THREE.Color();
+
+function lerpColors(a, b, t) {
+    _colA.set(a); _colB.set(b); _colMix.copy(_colA).lerp(_colB, t);
+    return _colMix;
+}
+
 function applyBiome(b) {
+    // Запускаем плавный переход
+    biomeFrom = biomeTo || b;
+    biomeTo = b;
+    biomeTransition = biomeTransDuration;
     baseFogNear = b.fogN;
     baseFogFar = b.fogF;
     baseGroundColor = b.ground;
-    scene.fog = null; // туман отключён
-    scene.background=new THREE.Color(b.sky);
+    roadMat.metalness = baseRoadMetalness;
+}
+
+function applyBiomeInstant(b) {
+    scene.fog = null;
+    scene.background = new THREE.Color(b.sky);
     ambLight.color.set(b.ambient);
-    dirLight.color.set(b.dir); dirLight.intensity=b.dirI;
+    dirLight.color.set(b.dir); dirLight.intensity = b.dirI;
     groundMat.color.set(b.ground);
     hemiLight.color.set(b.sky); hemiLight.groundColor.set(b.ground);
-    renderer.toneMappingExposure = b.dirI>0.5?1.1:0.7;
+    renderer.toneMappingExposure = b.dirI > 0.5 ? 1.1 : 0.7;
     const isNight = b.dirI < 0.6;
-    headL.intensity = isNight?8:0;
-    headR.intensity = isNight?8:0;
-    headL.distance = isNight?50:30;
-    headR.distance = isNight?50:30;
-    roadMat.metalness = baseRoadMetalness;
+    headL.intensity = isNight ? 8 : 0;
+    headR.intensity = isNight ? 8 : 0;
+    headL.distance = isNight ? 50 : 30;
+    headR.distance = isNight ? 50 : 30;
+}
+
+function updateBiomeTransition(dt) {
+    if (biomeTransition <= 0 || !biomeFrom || !biomeTo) return;
+    biomeTransition -= dt;
+    const t = Math.max(0, 1 - biomeTransition / biomeTransDuration); // 0→1
+
+    // Плавно интерполируем все цвета
+    scene.background = lerpColors(biomeFrom.sky, biomeTo.sky, t).clone();
+    ambLight.color.copy(lerpColors(biomeFrom.ambient, biomeTo.ambient, t));
+    dirLight.color.copy(lerpColors(biomeFrom.dir, biomeTo.dir, t));
+    dirLight.intensity = biomeFrom.dirI + (biomeTo.dirI - biomeFrom.dirI) * t;
+    groundMat.color.copy(lerpColors(biomeFrom.ground, biomeTo.ground, t));
+    hemiLight.color.copy(lerpColors(biomeFrom.sky, biomeTo.sky, t));
+    hemiLight.groundColor.copy(lerpColors(biomeFrom.ground, biomeTo.ground, t));
+    renderer.toneMappingExposure = (biomeFrom.dirI > 0.5 ? 1.1 : 0.7) + ((biomeTo.dirI > 0.5 ? 1.1 : 0.7) - (biomeFrom.dirI > 0.5 ? 1.1 : 0.7)) * t;
+
+    // Фары плавно
+    const nightFrom = biomeFrom.dirI < 0.6 ? 1 : 0;
+    const nightTo = biomeTo.dirI < 0.6 ? 1 : 0;
+    const nightT = nightFrom + (nightTo - nightFrom) * t;
+    headL.intensity = nightT * 8;
+    headR.intensity = nightT * 8;
+    headL.distance = 30 + nightT * 20;
+    headR.distance = 30 + nightT * 20;
+
+    if (biomeTransition <= 0) {
+        biomeTransition = 0;
+        applyBiomeInstant(biomeTo);
+    }
 }
 
 function applyWeather(type) {
@@ -3442,7 +3507,7 @@ function loop() {
         state.cTimer+=dt*1000;
         if(state.cTimer>1500){spawnCoin();state.cTimer=0;}
         state.eTimer+=dt*1000;
-        if(state.eTimer>180){spawnE();state.eTimer=0;}
+        if(state.eTimer>(isMobile?400:180)){spawnE();state.eTimer=0;}
         state.bTimer+=dt*1000;
         if(state.bTimer>8000){spawnBoost();state.bTimer=0;}
 
@@ -3463,6 +3528,9 @@ function loop() {
                 }
             }
         }
+
+        // Плавный переход биомов
+        updateBiomeTransition(dt);
 
         // Combo decay
         state.comboTimer-=dt;
@@ -3665,6 +3733,8 @@ function loop() {
         ui.speed.textContent=Math.floor(state.speed);
         ui.coins.textContent=state.coins;
         ui.speedOverlay.style.opacity=Math.max(0,(state.speed-60)/120);
+        // Спидометр — стрелка
+        updateSpeedometer(state.speed);
     }
 
     renderer.render(scene,camera);
@@ -3794,10 +3864,33 @@ function hideGarage() {
 }
 
 // ======================== EVENTS ========================
+const speedNeedle = document.getElementById('speed-needle');
+const speedNumber = document.getElementById('speed-number');
+const speedometerEl = document.getElementById('speedometer');
+
+function updateSpeedometer(speed) {
+    const maxSpeed = 200;
+    const pct = Math.min(speed / maxSpeed, 1);
+    // Угол: 0 км/ч = 180° (левая сторона), 200 км/ч = 0° (правая сторона)
+    const angle = Math.PI * (1 - pct); // от PI до 0
+    const cx = 70, cy = 75, len = 50;
+    const nx = cx + Math.cos(angle) * len;
+    const ny = cy - Math.sin(angle) * len;
+    speedNeedle.setAttribute('x2', nx.toFixed(1));
+    speedNeedle.setAttribute('y2', ny.toFixed(1));
+    speedNumber.textContent = Math.floor(speed);
+    // Цвет стрелки: зелёный → жёлтый → красный
+    if (speed > 140) speedNeedle.setAttribute('stroke', '#FF1744');
+    else if (speed > 80) speedNeedle.setAttribute('stroke', '#FFEB3B');
+    else speedNeedle.setAttribute('stroke', '#4CAF50');
+}
+
+const hudControls = document.getElementById('hud-controls');
+
 function showHUD(show) {
     ui.hud.style.display = show ? 'flex' : 'none';
-    ui.hudPauseBtn.style.display = show ? 'block' : 'none';
-    ui.hudMuteBtn.style.display = show ? 'block' : 'none';
+    hudControls.style.display = show ? 'flex' : 'none';
+    speedometerEl.style.display = show ? 'block' : 'none';
 }
 
 function startGame(mode) {
@@ -3875,7 +3968,8 @@ document.getElementById('btn-pause-menu').onclick = () => {
 ui.hudPauseBtn.onclick = () => pauseGame();
 ui.hudMuteBtn.onclick = () => {
     const muted = sfx.toggleMute();
-    ui.hudMuteBtn.textContent = muted ? '🔇' : '🔊';
+    document.getElementById('mute-icon-on').style.display = muted ? 'none' : 'block';
+    document.getElementById('mute-icon-off').style.display = muted ? 'block' : 'none';
 };
 window.addEventListener('resize',()=>{
     camera.aspect=window.innerWidth/window.innerHeight;
@@ -3889,7 +3983,8 @@ updateWalletDisplays();
 renderMissions();
 showHUD(false); // скрыть HUD на старте (показано меню)
 scene.background=new THREE.Color(BIOMES[0].sky);
-applyBiome(BIOMES[0]);
+biomeTo = BIOMES[0]; biomeFrom = BIOMES[0]; biomeTransition = 0;
+applyBiomeInstant(BIOMES[0]);
 playerCar.position.set(0,0,0);
 camera.position.set(0,4,-8);
 camera.lookAt(0,1,10);

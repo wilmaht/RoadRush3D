@@ -17,6 +17,21 @@
         .hud-box .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         .hud-box .value { font-size: 22px; font-weight: bold; margin-top: 1px; }
         .hud-speed .value { color: #FF5252; }
+        /* Спидометр */
+        #speedometer {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 140px; height: 85px; pointer-events: none; display: none;
+        }
+        #speedometer svg { width: 100%; height: 100%; }
+        #speed-number {
+            position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+            color: #fff; font-size: 22px; font-weight: bold;
+            text-shadow: 0 0 8px rgba(0,0,0,0.8);
+        }
+        #speed-unit {
+            position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+            color: #888; font-size: 10px;
+        }
         .hud-score .value { color: #fff; }
         .hud-coins .value { color: #FFD740; }
         #combo-display {
@@ -80,22 +95,18 @@
             display: none; flex-direction: column; align-items: center; justify-content: center;
             background: rgba(0,0,0,0.75); backdrop-filter: blur(15px); pointer-events: all;
         }
-        #hud-pause-btn {
-            position: absolute; top: 15px; left: 50%; transform: translateX(-65px);
-            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
-            color: #fff; font-size: 20px; border-radius: 50%; width: 40px; height: 40px;
-            cursor: pointer; pointer-events: all; display: none;
-            backdrop-filter: blur(8px); line-height: 40px; text-align: center; padding: 0;
+        #hud-controls {
+            position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+            display: none; gap: 6px; align-items: center; pointer-events: all;
         }
-        #hud-pause-btn:hover { background: rgba(255,255,255,0.15); }
-        #hud-mute-btn {
-            position: absolute; top: 15px; left: 50%; transform: translateX(25px);
-            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
-            color: #fff; font-size: 18px; border-radius: 50%; width: 40px; height: 40px;
-            cursor: pointer; pointer-events: all; display: none;
-            backdrop-filter: blur(8px); line-height: 40px; text-align: center; padding: 0;
+        #hud-controls button {
+            background: rgba(10,10,20,0.55); border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px; width: 36px; height: 36px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; padding: 0;
+            transition: background 0.15s;
         }
-        #hud-mute-btn:hover { background: rgba(255,255,255,0.15); }
+        #hud-controls button:hover { background: rgba(255,255,255,0.12); }
+        #hud-controls button svg { width: 16px; height: 16px; fill: #ccc; }
         h1 { font-size: 48px; color: #fff; margin-bottom: 4px; }
         h1 span { color: #FF5252; }
         .subtitle { color: #666; font-size: 15px; margin-bottom: 25px; }
@@ -236,11 +247,18 @@
     <div id="ui">
         <div id="hud">
             <div class="hud-box hud-score"><div class="label">Счёт</div><div class="value" id="score-val">0</div></div>
-            <div class="hud-box hud-speed"><div class="label">км/ч <span id="weather-icon"></span></div><div class="value" id="speed-val">0</div></div>
+            <div class="hud-box hud-speed"><div class="label"><span id="weather-icon"></span></div><div class="value" id="speed-val" style="display:none">0</div></div>
             <div class="hud-box hud-coins"><div class="label">Монеты</div><div class="value" id="coins-val">0</div></div>
         </div>
-        <button id="hud-pause-btn">⏸</button>
-        <button id="hud-mute-btn">🔊</button>
+        <div id="hud-controls">
+            <button id="hud-pause-btn" title="Pause">
+                <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>
+            </button>
+            <button id="hud-mute-btn" title="Sound">
+                <svg id="mute-icon-on" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 8.5v7a4.47 4.47 0 002.5-3.5zM14 3.23v2.06a7.007 7.007 0 010 13.42v2.06A9.009 9.009 0 0014 3.23z"/></svg>
+                <svg id="mute-icon-off" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12A4.5 4.5 0 0014 8.5v2.09l2.4 2.4c.07-.3.1-.64.1-.99zM19 12a7 7 0 00-.56-2.75l-1.46 1.46A5.14 5.14 0 0117 12c0 2.81-1.88 5.18-4.47 5.93v2.06C16.2 19.29 19 15.96 19 12zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9.05 9.05 0 003.69-1.89L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+            </button>
+        </div>
         <div id="biome-label"></div>
         <div id="combo-display"></div>
         <div id="near-miss"></div>
@@ -258,6 +276,39 @@
             <div id="fuel-label">⛽ БЕНЗИН</div>
         </div>
         <div id="fuel-warning">⛽ БЕНЗИН НА ИСХОДЕ!</div>
+        <div id="speedometer">
+            <svg viewBox="0 0 140 80" xmlns="http://www.w3.org/2000/svg">
+                <!-- Фон полукруга -->
+                <path d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8" stroke-linecap="round"/>
+                <!-- Цветная дуга (зелёный → жёлтый → красный) -->
+                <defs>
+                    <linearGradient id="speedGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#4CAF50"/>
+                        <stop offset="50%" style="stop-color:#FFEB3B"/>
+                        <stop offset="100%" style="stop-color:#FF1744"/>
+                    </linearGradient>
+                </defs>
+                <path d="M 15 75 A 55 55 0 0 1 125 75" fill="none" stroke="url(#speedGrad)" stroke-width="6" stroke-linecap="round" opacity="0.6"/>
+                <!-- Деления -->
+                <line x1="15" y1="75" x2="20" y2="70" stroke="#888" stroke-width="1"/>
+                <line x1="32" y1="35" x2="37" y2="39" stroke="#888" stroke-width="1"/>
+                <line x1="70" y1="20" x2="70" y2="26" stroke="#888" stroke-width="1"/>
+                <line x1="108" y1="35" x2="103" y2="39" stroke="#888" stroke-width="1"/>
+                <line x1="125" y1="75" x2="120" y2="70" stroke="#888" stroke-width="1"/>
+                <!-- Цифры -->
+                <text x="10" y="74" fill="#666" font-size="8" font-family="Arial">0</text>
+                <text x="24" y="36" fill="#666" font-size="8" font-family="Arial">60</text>
+                <text x="63" y="18" fill="#666" font-size="8" font-family="Arial">120</text>
+                <text x="108" y="36" fill="#666" font-size="8" font-family="Arial">180</text>
+                <!-- Стрелка -->
+                <line id="speed-needle" x1="70" y1="75" x2="20" y2="72" stroke="#FF5252" stroke-width="2.5" stroke-linecap="round"/>
+                <!-- Центральная точка -->
+                <circle cx="70" cy="75" r="4" fill="#FF5252"/>
+                <circle cx="70" cy="75" r="2" fill="#fff"/>
+            </svg>
+            <div id="speed-number">0</div>
+            <div id="speed-unit">км/ч</div>
+        </div>
         <div id="speed-overlay"></div>
     </div>
 
