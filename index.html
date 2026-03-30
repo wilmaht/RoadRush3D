@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Road Rush 3D</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
+        canvas { display: block; }
+        #ui { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        #hud { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; }
+        .hud-box {
+            background: rgba(0,0,0,0.6); border-radius: 10px; padding: 8px 14px;
+            color: #fff; backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.08);
+        }
+        .hud-box .label { font-size: 10px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .hud-box .value { font-size: 22px; font-weight: bold; margin-top: 1px; }
+        .hud-speed .value { color: #FF5252; }
+        .hud-score .value { color: #fff; }
+        .hud-coins .value { color: #FFD740; }
+        #combo-display {
+            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+            font-size: 36px; font-weight: bold; color: #FF9100; opacity: 0;
+            text-shadow: 0 0 20px rgba(255,145,0,0.8), 0 2px 10px rgba(0,0,0,0.8);
+            transition: opacity 0.2s; pointer-events: none;
+        }
+        #near-miss {
+            position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
+            font-size: 24px; font-weight: bold; color: #76FF03; opacity: 0;
+            text-shadow: 0 0 15px rgba(118,255,3,0.6); transition: opacity 0.15s;
+        }
+        #biome-label {
+            position: absolute; top: 55px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); border-radius: 20px; padding: 6px 20px;
+            color: #fff; font-size: 15px; opacity: 0; transition: opacity 0.5s;
+        }
+        #biome-label.show { opacity: 1; }
+        #speed-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 80%, transparent 30%, rgba(255,100,0,0.08) 70%, rgba(255,50,0,0.15) 100%);
+        }
+        /* Police chase UI */
+        #chase-ui {
+            position: absolute; top: 110px; left: 50%; transform: translateX(-50%);
+            background: rgba(200,0,0,0.7); border-radius: 10px; padding: 6px 18px;
+            color: #fff; font-size: 16px; font-weight: bold; display: none;
+            text-shadow: 0 0 8px rgba(255,0,0,0.6);
+            border: 1px solid rgba(255,50,50,0.4);
+        }
+        /* Duel progress bar */
+        #duel-ui {
+            position: absolute; top: 110px; left: 15px; right: 15px; display: none;
+        }
+        #duel-bar-bg {
+            width: 100%; height: 22px; background: rgba(0,0,0,0.6); border-radius: 11px;
+            position: relative; border: 1px solid rgba(255,255,255,0.15);
+        }
+        #duel-player-marker, #duel-rival-marker {
+            position: absolute; top: -2px; width: 14px; height: 26px; border-radius: 4px;
+        }
+        #duel-player-marker { background: #2196F3; border: 2px solid #fff; left: 0; }
+        #duel-rival-marker { background: #FF5722; border: 2px solid #fff; left: 0; }
+        #duel-finish-label {
+            position: absolute; right: 4px; top: 3px; font-size: 11px; color: #aaa;
+        }
+        #duel-distance-label {
+            text-align: center; color: #aaa; font-size: 12px; margin-top: 4px;
+        }
+        /* Menu and gameover */
+        #menu, #gameover {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(15px); pointer-events: all;
+        }
+        #gameover { display: none; }
+        #pause {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.75); backdrop-filter: blur(15px); pointer-events: all;
+        }
+        #hud-pause-btn {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-65px);
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 20px; border-radius: 50%; width: 40px; height: 40px;
+            cursor: pointer; pointer-events: all; display: none;
+            backdrop-filter: blur(8px); line-height: 40px; text-align: center; padding: 0;
+        }
+        #hud-pause-btn:hover { background: rgba(255,255,255,0.15); }
+        #hud-mute-btn {
+            position: absolute; top: 15px; left: 50%; transform: translateX(25px);
+            background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15);
+            color: #fff; font-size: 18px; border-radius: 50%; width: 40px; height: 40px;
+            cursor: pointer; pointer-events: all; display: none;
+            backdrop-filter: blur(8px); line-height: 40px; text-align: center; padding: 0;
+        }
+        #hud-mute-btn:hover { background: rgba(255,255,255,0.15); }
+        h1 { font-size: 48px; color: #fff; margin-bottom: 4px; }
+        h1 span { color: #FF5252; }
+        .subtitle { color: #666; font-size: 15px; margin-bottom: 25px; }
+        .btn {
+            padding: 14px 44px; font-size: 20px; font-weight: bold; border: none;
+            border-radius: 10px; cursor: pointer; margin: 6px; transition: transform 0.12s;
+            pointer-events: all;
+        }
+        .btn:hover { transform: scale(1.05); }
+        .btn:active { transform: scale(0.95); }
+        .btn-play { background: linear-gradient(135deg, #FF5252, #FF1744); color: #fff; box-shadow: 0 4px 25px rgba(255,23,68,0.4); }
+        .btn-chase { background: linear-gradient(135deg, #2196F3, #1565C0); color: #fff; box-shadow: 0 4px 25px rgba(33,150,243,0.4); }
+        .btn-duel { background: linear-gradient(135deg, #FF9800, #E65100); color: #fff; box-shadow: 0 4px 25px rgba(255,152,0,0.4); }
+        .btn-fuel { background: linear-gradient(135deg, #4CAF50, #2E7D32); color: #fff; box-shadow: 0 4px 25px rgba(76,175,80,0.4); }
+        .btn-garage { background: rgba(255,255,255,0.10); color: #aaa; border: 1px solid rgba(255,255,255,0.18); margin-top: 10px; }
+        .btn-garage:hover { background: rgba(255,255,255,0.18); color: #fff; }
+        .wallet-display { color: #FFD740; font-size: 16px; margin-bottom: 8px; }
+        /* Garage screen */
+        #garage {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); pointer-events: all;
+            overflow-y: auto; padding: 15px 10px;
+        }
+        .garage-title { font-size: 36px; color: #fff; font-weight: bold; margin-bottom: 2px; }
+        .garage-wallet { color: #FFD740; font-size: 20px; margin-bottom: 10px; }
+        .garage-sections { display: flex; gap: 12px; width: 100%; max-width: 900px; flex: 1; min-height: 0; }
+        @media (max-width: 700px) { .garage-sections { flex-direction: column; } }
+        .garage-section { flex: 1; background: rgba(255,255,255,0.04); border-radius: 12px; padding: 10px; min-width: 0; }
+        .garage-section h3 { color: #aaa; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; text-align: center; }
+        .body-cards { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+        .body-card {
+            width: 110px; background: rgba(255,255,255,0.06); border-radius: 8px; padding: 6px;
+            cursor: pointer; text-align: center; border: 2px solid transparent; transition: border-color 0.15s, background 0.15s;
+        }
+        .body-card:hover { background: rgba(255,255,255,0.12); }
+        .body-card.selected { border-color: #FFD740; }
+        .body-card.owned { border-color: rgba(76,175,80,0.4); }
+        .body-card .car-preview { width: 60px; height: 30px; border-radius: 4px; margin: 0 auto 4px; }
+        .body-card .car-name { color: #fff; font-size: 12px; font-weight: bold; }
+        .body-card .car-price { color: #FFD740; font-size: 11px; }
+        .body-card .car-action { font-size: 10px; color: #76FF03; margin-top: 2px; }
+        .color-circles { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+        .color-circle {
+            width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+            border: 3px solid transparent; transition: border-color 0.15s, transform 0.12s;
+        }
+        .color-circle:hover { transform: scale(1.15); }
+        .color-circle.selected { border-color: #FFD740; box-shadow: 0 0 10px rgba(255,215,64,0.4); }
+        .color-circle.locked { opacity: 0.5; }
+        .color-price { text-align: center; color: #FFD740; font-size: 10px; margin-top: 2px; }
+        .upgrade-row {
+            display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+            background: rgba(255,255,255,0.04); border-radius: 8px; padding: 6px 8px;
+        }
+        .upgrade-icon { font-size: 18px; }
+        .upgrade-info { flex: 1; min-width: 0; }
+        .upgrade-name { color: #fff; font-size: 12px; font-weight: bold; }
+        .upgrade-bars { display: flex; gap: 3px; margin-top: 3px; }
+        .upgrade-bar-seg { width: 20px; height: 8px; border-radius: 2px; background: rgba(255,255,255,0.1); }
+        .upgrade-bar-seg.filled { background: #76FF03; }
+        .upgrade-cost { color: #FFD740; font-size: 11px; white-space: nowrap; }
+        .upgrade-btn {
+            background: rgba(76,175,80,0.3); color: #76FF03; border: 1px solid rgba(76,175,80,0.4);
+            border-radius: 6px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold;
+        }
+        .upgrade-btn:hover { background: rgba(76,175,80,0.5); }
+        .upgrade-btn.maxed { background: rgba(255,255,255,0.05); color: #666; border-color: rgba(255,255,255,0.1); cursor: default; }
+        .garage-back {
+            margin-top: 10px; padding: 10px 40px; font-size: 18px; font-weight: bold;
+            background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px; cursor: pointer; pointer-events: all;
+        }
+        .garage-back:hover { background: rgba(255,255,255,0.15); color: #fff; }
+        /* Fuel gauge */
+        #fuel-ui {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 200px; display: none;
+        }
+        #fuel-bar-bg {
+            width: 100%; height: 16px; background: rgba(0,0,0,0.7); border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.15); overflow: hidden;
+        }
+        #fuel-bar-fill {
+            height: 100%; width: 100%; border-radius: 8px;
+            background: linear-gradient(90deg, #FF1744, #FF9100, #4CAF50);
+            transition: width 0.2s;
+        }
+        #fuel-label {
+            text-align: center; color: #aaa; font-size: 11px; margin-top: 3px;
+        }
+        #fuel-warning {
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            font-size: 20px; font-weight: bold; color: #FF1744; opacity: 0;
+            text-shadow: 0 0 15px rgba(255,23,68,0.8);
+            animation: pulse 0.5s infinite alternate;
+        }
+        .btn-restart { background: linear-gradient(135deg, #FF5252, #FF1744); color: #fff; box-shadow: 0 4px 25px rgba(255,23,68,0.4); }
+        .btn-menu { background: rgba(255,255,255,0.08); color: #aaa; border: 1px solid rgba(255,255,255,0.15); }
+        .mode-desc { color: #888; font-size: 12px; margin-top: -2px; margin-bottom: 8px; }
+        .stats { color: #FFD740; font-size: 18px; margin: 12px 0; }
+        .record { color: #888; font-size: 15px; margin-bottom: 15px; }
+        .new-record { color: #76FF03; font-size: 20px; font-weight: bold; animation: pulse 0.6s infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.15); } }
+        .go-final-score { font-size: 52px; color: #fff; font-weight: bold; margin: 8px 0; }
+        .go-title { font-size: 32px; color: #FF5252; font-weight: bold; margin-bottom: 8px; }
+        .controls-hint { color: #555; font-size: 12px; margin-top: 20px; }
+        /* Missions panel */
+        #missions-panel { width: 90%; max-width: 500px; margin: 12px auto 0; }
+        .missions-title { color: #aaa; font-size: 14px; font-weight: bold; text-align: center; margin-bottom: 6px; letter-spacing: 1px; }
+        #missions-list { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+        .mission-card {
+            background: rgba(255,255,255,0.06); border-radius: 8px; padding: 6px 10px;
+            border: 2px solid rgba(255,255,255,0.1); cursor: default; flex: 1; min-width: 130px; max-width: 170px;
+            text-align: center; transition: border-color 0.2s, background 0.2s;
+        }
+        .mission-card.done { border-color: #76FF03; cursor: pointer; }
+        .mission-card.claimed { border-color: #555; opacity: 0.5; }
+        .mission-card .mission-desc { color: #ccc; font-size: 11px; margin: 4px 0; }
+        .mission-card .mission-reward { color: #FFD740; font-size: 12px; font-weight: bold; }
+        .mission-card .mission-status { font-size: 10px; margin-top: 3px; }
+        .mission-card .mission-status.pending { color: #888; }
+        .mission-card .mission-status.completed { color: #76FF03; }
+        .mission-card .mission-status.claimed-text { color: #555; }
+        /* Second life overlay */
+        #second-life {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.80); backdrop-filter: blur(15px); pointer-events: all; z-index: 20;
+        }
+        /* Weather icon */
+        #weather-icon {
+            font-size: 18px; margin-left: 6px; vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <div id="hud">
+            <div class="hud-box hud-score"><div class="label">Счёт</div><div class="value" id="score-val">0</div></div>
+            <div class="hud-box hud-speed"><div class="label">км/ч <span id="weather-icon"></span></div><div class="value" id="speed-val">0</div></div>
+            <div class="hud-box hud-coins"><div class="label">Монеты</div><div class="value" id="coins-val">0</div></div>
+        </div>
+        <button id="hud-pause-btn">⏸</button>
+        <button id="hud-mute-btn">🔊</button>
+        <div id="biome-label"></div>
+        <div id="combo-display"></div>
+        <div id="near-miss"></div>
+        <div id="chase-ui">🚔 ПОЛИЦИЯ: <span id="chase-dist">--</span>м</div>
+        <div id="duel-ui">
+            <div id="duel-bar-bg">
+                <div id="duel-player-marker"></div>
+                <div id="duel-rival-marker"></div>
+                <div id="duel-finish-label">ФИНИШ 2000м</div>
+            </div>
+            <div id="duel-distance-label"></div>
+        </div>
+        <div id="fuel-ui">
+            <div id="fuel-bar-bg"><div id="fuel-bar-fill"></div></div>
+            <div id="fuel-label">⛽ БЕНЗИН</div>
+        </div>
+        <div id="fuel-warning">⛽ БЕНЗИН НА ИСХОДЕ!</div>
+        <div id="speed-overlay"></div>
+    </div>
+
+    <div id="menu">
+        <h1>ROAD <span>RUSH</span> 3D</h1>
+        <div class="subtitle">Low Poly Street Racing</div>
+        <div class="record" id="menu-record"></div>
+        <button class="btn btn-play" id="btn-endless">Бесконечная гонка</button>
+        <div class="mode-desc">Обгоняй трафик, собирай монеты, езжай как можно дальше</div>
+        <button class="btn btn-chase" id="btn-chase">Погоня</button>
+        <div class="mode-desc">Уйди от полиции!</div>
+        <button class="btn btn-duel" id="btn-duel">Дуэль</button>
+        <div class="mode-desc">Обгони соперника до финиша (2000м)</div>
+        <button class="btn btn-fuel" id="btn-fuel">Бензин</button>
+        <div class="mode-desc">Топливо заканчивается — подбирай канистры!</div>
+        <div class="wallet-display" id="menu-wallet"></div>
+        <button class="btn btn-garage" id="btn-garage">&#128295; ГАРАЖ</button>
+        <div id="missions-panel">
+            <div class="missions-title">&#128203; ЗАДАНИЯ ДНЯ</div>
+            <div id="missions-list"></div>
+        </div>
+        <div class="controls-hint">← → / A D / свайп = руль | ↓ / S = тормоз</div>
+    </div>
+
+    <div id="garage">
+        <div class="garage-title">ГАРАЖ</div>
+        <div class="garage-wallet" id="garage-wallet"></div>
+        <div class="garage-sections">
+            <div class="garage-section">
+                <h3>Кузов</h3>
+                <div class="body-cards" id="garage-bodies"></div>
+            </div>
+            <div class="garage-section">
+                <h3>Цвет</h3>
+                <div class="color-circles" id="garage-colors"></div>
+            </div>
+            <div class="garage-section">
+                <h3>Апгрейды</h3>
+                <div id="garage-upgrades"></div>
+            </div>
+        </div>
+        <button class="garage-back" id="btn-garage-back">НАЗАД</button>
+    </div>
+
+    <div id="gameover">
+        <div class="go-title" id="go-title">АВАРИЯ</div>
+        <div class="go-final-score" id="go-score">0</div>
+        <div class="stats" id="go-stats"></div>
+        <div id="go-record-label"></div>
+        <button class="btn btn-restart" id="btn-restart">ЕЩЁ РАЗ</button>
+        <button class="btn btn-menu" id="btn-back-menu">МЕНЮ</button>
+    </div>
+
+    <div id="pause">
+        <div class="go-title" style="color:#64B5F6">⏸ ПАУЗА</div>
+        <button class="btn btn-play" id="btn-resume">▶ ПРОДОЛЖИТЬ</button>
+        <button class="btn btn-menu" id="btn-pause-menu">МЕНЮ</button>
+        <div class="controls-hint" style="margin-top:15px">Escape / P — пауза</div>
+    </div>
+
+    <div id="second-life">
+        <div style="font-size:48px">&#128165;</div>
+        <div class="go-title" style="color:#FF9100">АВАРИЯ!</div>
+        <div style="color:#aaa;margin:10px">Хочешь продолжить?</div>
+        <button class="btn btn-play" id="btn-continue">&#9654; ПРОДОЛЖИТЬ</button>
+        <button class="btn btn-menu" id="btn-no-continue">&#10005; НЕТ</button>
+    </div>
+
+    <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+    </script>
+    <script>window.onerror=function(m,s,l,c,e){document.title='ERR';document.getElementById('menu').innerHTML='<pre style="color:red;font-size:14px;padding:20px;text-align:left">'+m+'\nLine: '+l+':'+c+'\n'+(e&&e.stack?e.stack:'')+'</pre>';}</script>
+    <script type="module" src="src/game.js"></script>
+</body>
+</html>
