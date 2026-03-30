@@ -291,7 +291,7 @@ class WeatherParticles {
         this.snowPool = [];
         // Create rain pool (thin lines)
         const rainMat = new THREE.MeshBasicMaterial({color:0xaabbdd, transparent:true, opacity:0.4});
-        for (let i = 0; i < (isMobile ? 20 : 80); i++) {
+        for (let i = 0; i < (isMobile ? 40 : 80); i++) {
             const geo = new THREE.BoxGeometry(0.02, 0.8, 0.02);
             const mesh = new THREE.Mesh(geo, rainMat);
             mesh.visible = false;
@@ -300,7 +300,7 @@ class WeatherParticles {
         }
         // Create snow pool (small spheres)
         const snowMat = new THREE.MeshBasicMaterial({color:0xffffff, transparent:true, opacity:0.7});
-        for (let i = 0; i < (isMobile ? 15 : 60); i++) {
+        for (let i = 0; i < (isMobile ? 30 : 60); i++) {
             const geo = new THREE.SphereGeometry(0.06, 4, 3);
             const mesh = new THREE.Mesh(geo, snowMat);
             mesh.visible = false;
@@ -1079,7 +1079,7 @@ const nightWinMats = [ME(0x00E5FF, 1.2), ME(0xFF4081, 1.2), ME(0xFFEA00, 1.2), M
 function makeCityBlock() {
     const group = new THREE.Group();
     // Делаем стену ОЧЕНЬ длинной, чтобы избежать зазоров от спавнера
-    const buildingCount = isMobile ? (3 + Math.floor(Math.random() * 2)) : (10 + Math.floor(Math.random() * 4));
+    const buildingCount = isMobile ? (4 + Math.floor(Math.random() * 3)) : (10 + Math.floor(Math.random() * 4));
     let zCursor = 0;
     const isNight = typeof isNightBiome === 'function' && isNightBiome();
 
@@ -1096,7 +1096,7 @@ function makeCityBlock() {
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw, bhBase, bd).translate(0, bhBase / 2, 0), wallMat));
         bg.add(new THREE.Mesh(new THREE.BoxGeometry(bw + 0.4, 0.4, bd + 0.4).translate(0, bhBase + 0.2, 0), matCityLedge));
 
-        if (!isMobile) {
+        {
             // Верхние ярусы (Ступенчатые крыши как на референсе)
             if (Math.random() < 0.7) {
                 const bw2 = bw * (0.6 + Math.random() * 0.3);
@@ -1831,7 +1831,7 @@ const LAMP_OFFSET_X = 12/2 + 1.5;
 class Particles {
     constructor(sc) { this.scene = sc; this.sparks = []; }
     burst(pos, count=15, color=0xFF6D00) {
-        if (isMobile) count = Math.min(count, 5);
+        if (isMobile) count = Math.min(count, 10);
         for (let i=0; i<count; i++) {
             const geo = new THREE.BoxGeometry(0.08,0.08,0.08);
             const mat = new THREE.MeshBasicMaterial({color: [0xFF6D00,0xFF3D00,0xFFAB00,0xFFFFFF,0xFF1744][Math.floor(Math.random()*5)]});
@@ -1917,9 +1917,9 @@ const state = {
 };
 
 // ======================== RENDERER & SCENE ========================
-const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference:'high-performance' });
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference:'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(isMobile ? 1 : Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = !isMobile;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -3607,7 +3607,7 @@ function loop() {
         state.cTimer+=dt*1000;
         if(state.cTimer>1500){spawnCoin();state.cTimer=0;}
         state.eTimer+=dt*1000;
-        if(state.eTimer>(isMobile?400:180)){spawnE();state.eTimer=0;}
+        if(state.eTimer>(isMobile?250:180)){spawnE();state.eTimer=0;}
         state.bTimer+=dt*1000;
         if(state.bTimer>8000){spawnBoost();state.bTimer=0;}
 
