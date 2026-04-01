@@ -10,6 +10,24 @@ let lastAdTime = 0;
 let adThreshold = 3;
 
 export async function initYandexSDK() {
+    // Wait for async SDK script to load (max 3s)
+    if (typeof YaGames === 'undefined') {
+        await new Promise(resolve => {
+            let waited = 0;
+            const interval = setInterval(() => {
+                waited += 100;
+                if (typeof YaGames !== 'undefined' || waited >= 3000) {
+                    clearInterval(interval);
+                    resolve();
+                }
+            }, 100);
+        });
+    }
+    if (typeof YaGames === 'undefined') {
+        const bl = (navigator.language || '').slice(0,2);
+        setLang(TEXTS[bl] ? bl : 'en');
+        return;
+    }
     try {
         ysdk = await Promise.race([
             YaGames.init(),
