@@ -11,7 +11,10 @@ let adThreshold = 3;
 
 export async function initYandexSDK() {
     try {
-        ysdk = await YaGames.init();
+        ysdk = await Promise.race([
+            YaGames.init(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('SDK timeout')), 3000))
+        ]);
         try {
             const lang = ysdk.environment.i18n.lang;
             setLang(TEXTS[lang] ? lang : 'en');
