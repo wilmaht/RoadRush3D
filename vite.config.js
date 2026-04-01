@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  base: './',
   // Yandex Games требует всё в одном html+js, поэтому инлайним ассеты
   build: {
     outDir: 'dist',
