@@ -1290,8 +1290,152 @@ function buildGenericVoxelCar(color, type, isPlayer) {
     return g;
 }
 
+function buildDetailedSpeedster(baseColorHex, isPlayer) {
+    const grid = {};
+    const CO = baseColorHex;
+    const CB = (baseColorHex===0xE65100||baseColorHex===0xFFD700)?0x2196F3:((baseColorHex===0xEEEEEE)?0x1565C0:0xD32F2F);
+    const CD = 0x333333;
+    const CW = 0xffffee;
+    const CG = 0x111111;
+    const CR = 0xff0000;
+
+    function setV(x, y, z, c) { // Apply stripes!
+        if (c === CO && (x === -2 || x === 1)) c = CB; 
+        grid[`${x}_${y}_${z}`] = {x,y,z,c};
+    }
+    function addBlock(x1, x2, y1, y2, z1, z2, c) {
+        for(let x=x1; x<=x2; x++) 
+            for(let y=y1; y<=y2; y++) 
+                for(let z=z1; z<=z2; z++) 
+                    setV(x,y,z,c);
+    }
+
+    // Chassis Box
+    addBlock(-5, 4, 1, 3, -11, 11, CO);
+    addBlock(-5, 4, 1, 2, 12, 12, CD); // Bumper F
+    addBlock(-5, 4, 1, 2, -12, -12, CD); // Bumper R
+    
+    // Grille & Lights
+    addBlock(-4, 3, 3, 4, 12, 12, 0x111111);
+    addBlock(-4, -3, 3, 4, 12, 12, CW); // HL Left
+    addBlock( 2,  3, 3, 4, 12, 12, CW); // HL Right
+    addBlock(-3, -2, 1, 1, 13, 13, CW); // Fog L
+    addBlock( 1,  2, 1, 1, 13, 13, CW); // Fog R
+    addBlock(-4, -2, 3, 3, -12, -12, CR); // Tail L
+    addBlock( 1,  3, 3, 3, -12, -12, CR); // Tail R
+
+    // Wheel arches
+    addBlock(-6, 5, 1, 3, 6, 10, CO); // Front
+    addBlock(-6, 5, 1, 3, -8, -4, CO); // Rear
+    // Cutouts for wheels
+    for(let x=-6; x<=5; x++) {
+        for(let y=0; y<=3; y++) {
+            for(let z=-7; z<=-5; z++) if(x>4||x<-5) delete grid[`${x}_${y}_${z}`];
+            for(let z=7; z<=9; z++) if(x>4||x<-5) delete grid[`${x}_${y}_${z}`];
+        }
+    }
+
+    // Number 77 door stickers
+    addBlock(-6, -6, 2, 5, -2, 2, CW); // Left plate
+    addBlock( 5,  5, 2, 5, -2, 2, CW); // Right plate
+    [ -6, 5 ].forEach(x => { // Draw 77
+        setV(x, 4, -1, CB); setV(x, 4, 0, CB); setV(x, 3, 0, CB); setV(x, 2, 0, CB);
+        setV(x, 4, 1, CB); setV(x, 4, 2, CB); setV(x, 3, 2, CB); setV(x, 2, 2, CB);
+    });
+
+    // Hood & Cabin Base
+    addBlock(-5, 4, 4, 4, 2, 11, CO); // Hood
+    addBlock(-5, 4, 5, 7, -9, 1, CO); // Full cabin block
+    
+    // Windshields (Sloped Cut)
+    addBlock(-5, 4, 5, 5, 1, 1, CG);
+    addBlock(-5, 4, 6, 6, 0, 0, CG);
+    addBlock(-5, 4, 7, 7, -1, -1, CG);
+    addBlock(-5, 4, 6, 6, -9, -9, CG); // Rear
+    addBlock(-5, 4, 7, 7, -8, -8, CG);
+
+    // Roof Center
+    addBlock(-5, 4, 7, 7, -8, -2, CO);
+    addBlock(-5, 4, 5, 6, -8, 0, CG); // Side windows solid
+    addBlock(-4, 3, 5, 6, -8, 0, 0x000000); // Black out interior to prevent Z-fighting inside
+
+    // Pillars
+    addBlock(-5, -5, 5, 6, -4, -4, CO); // Left B-pillar
+    addBlock( 4,  4, 5, 6, -4, -4, CO); // Right B-pillar
+    addBlock(-5, -5, 7, 7, -8, -1, CO); // Left roof frame
+    addBlock( 4,  4, 7, 7, -8, -1, CO); // Right roof frame
+    addBlock(-6, -6, 5, 5, 1, 1, CO); // Mirrors
+    addBlock( 5,  5, 5, 5, 1, 1, CO);
+
+    // Render Mesh
+    const voxels = Object.values(grid);
+    const voxelGeo = new THREE.BoxGeometry(0.095, 0.095, 0.095);
+    const voxelMat = new THREE.MeshStandardMaterial({roughness: 0.8, metalness: 0.1});
+    const instMesh = new THREE.InstancedMesh(voxelGeo, voxelMat, voxels.length);
+    const dummy = new THREE.Object3D();
+    const tempColor = new THREE.Color();
+    
+    for(let i=0; i<voxels.length; i++) {
+        dummy.position.set(voxels[i].x * 0.1, voxels[i].y * 0.1, voxels[i].z * 0.1);
+        dummy.updateMatrix();
+        instMesh.setMatrixAt(i, dummy.matrix);
+        tempColor.setHex(voxels[i].c);
+        instMesh.setColorAt(i, tempColor);
+    }
+    instMesh.instanceMatrix.needsUpdate = true;
+    instMesh.instanceColor.needsUpdate = true;
+    instMesh.castShadow = true;
+    instMesh.receiveShadow = true;
+
+    const g = new THREE.Group();
+    g.add(instMesh);
+
+    // Custom Voxel Wheels
+    const makeWheel = (x,z) => {
+        const wVox = [];
+        for(let wx=0; wx<=1; wx++) {
+            for(let wy=-1; wy<=2; wy++) {
+                for(let wz=-1; wz<=2; wz++) {
+                    if ((wy===-1||wy===2) && (wz===-1||wz===2)) continue; 
+                    const c = (wy===0||wy===1) && (wz===0||wz===1) ? 0xaaaaaa : 0x111111;
+                    wVox.push({x:wx, y:wy, z:wz, c});
+                }
+            }
+        }
+        const wInst = new THREE.InstancedMesh(voxelGeo, voxelMat, wVox.length);
+        const wdum = new THREE.Object3D();
+        for(let i=0; i<wVox.length; i++) {
+            wdum.position.set(wVox[i].x*0.1, wVox[i].y*0.1, wVox[i].z*0.1);
+            wdum.updateMatrix();
+            wInst.setMatrixAt(i, wdum.matrix);
+            tempColor.setHex(wVox[i].c);
+            wInst.setColorAt(i, tempColor);
+        }
+        wInst.position.set(x * 0.1, 1 * 0.1, z * 0.1);
+        return wInst;
+    };
+    g.add(makeWheel(-6, 8)); 
+    g.add(makeWheel(4, 8));  
+    g.add(makeWheel(-6, -6)); 
+    g.add(makeWheel(4, -6));  
+
+    // Invisible Brake Lights so game logic works correctly
+    [-0.3, 0.3].forEach((x, i) => {
+        const bl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.1), ME(0xff0000, 0.8));
+        bl.position.set(x, 0.3, -1.2);
+        bl.name = 'brakeLight' + i;
+        g.add(bl);
+    });
+
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 5.0), new THREE.MeshBasicMaterial({color:0,transparent:true,opacity:0.4}));
+    sh.rotation.x = -Math.PI/2; sh.position.y = 0.02; g.add(sh);
+
+    g.scale.set(1.4, 1.4, 1.4); // Match physics scale
+    return g;
+}
+
 const BODY_BUILDERS = {
-    speedster: (c, isP) => buildGenericVoxelCar(c, 'speedster', isP),
+    speedster: (c, isP) => buildDetailedSpeedster(c, isP),
     driftking: (c, isP) => buildGenericVoxelCar(c, 'driftking', isP),
     monster:   (c, isP) => buildGenericVoxelCar(c, 'monster', isP),
     aero:      (c, isP) => buildGenericVoxelCar(c, 'aero', isP),
